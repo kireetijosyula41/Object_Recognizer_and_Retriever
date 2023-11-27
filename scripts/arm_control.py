@@ -16,7 +16,7 @@ class ActionHandler:
     def __init__(self):
         #### Publishers and subscribers
         ## Subscribes to end_position topic, receives (x, y, z) coordinate of arm goal
-        self.end_pos_sub = rospy.Subscriber("end_position", HandPos, self.set_end_pos, queue_size=10)
+        # self.end_pos_sub = rospy.Subscriber("end_position", HandPos, self.set_end_pos, queue_size=10)
         ## Interface to control arm movement
         self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
         ## Interface to control arm gripper
@@ -37,9 +37,9 @@ class ActionHandler:
         self.theta_max = (360.0) * (math.pi / 180) 
 
         ## Constants for arm dimensions (https://emanual.robotis.com/docs/en/platform/openmanipulator_x/specification/#dimension)
-        self.l1 = 0.130
-        self.l2 = 0.124
-        self.l3 = 0.126
+        self.l1 = 12.8
+        self.l2 = 12.4
+        self.l3 = 12.6
 
         ## Storing values for target angles
         self.q1 = 0
@@ -50,6 +50,7 @@ class ActionHandler:
     ## For a 3R manipulator, we can calculate the 2nd and 3rd angles of the arm using planar calculations
     ## Sets q2 and q3 values
     def two_RIK(self, x, y, z):
+        print("Attempting to move to angle {0} {1} {2}".format(x, y, z))
         ## Find the cosine of the 2nd angle
         ## Move the frame of reference to consider the 2D calculations
         norm = math.sqrt(x*x + y*y)
@@ -81,12 +82,13 @@ class ActionHandler:
 
         ## Find the best solution
         ## Arbitrarily select the first angles
-        self.q2 = q2_a
-        self.q3 = q3_a
+        self.q2 = q2_a * (math.pi / 180)
+        self.q3 = q3_a * (math.pi / 180)
 
         ## The first angle value is always the same
-        self.q1 = math.atan2(y, x)
+        self.q1 = math.atan2(y, x) * (math.pi / 180)
 
+        print("q1: {0}, q2:{1}, q3:{2}".format(self.q1, self.q2, self.q3))
 
     ## Camera data should be converted to cartesian coordinates (x, y, z).
     ## Based on the limitations of the arm movements, set a limited domain and set
@@ -101,21 +103,21 @@ class ActionHandler:
         #     pass
 
         # rate.sleep()
-        self.two_RIK(0, 2, 0)
+        self.two_RIK(50, 50, 0)
         ## Move the arm
-        self.move_group_arm.go([self.q1, self.q2, self.q3], wait=True)
+        self.move_group_arm.go([self.q1, self.q2, self.q3, 0], wait=True)
         self.move_group_arm.stop()
         rospy.sleep(10)
 
-        self.two_RIK(2, 0, 0)
+        self.two_RIK(0, 0, 0)
         ## Move the arm
-        self.move_group_arm.go([self.q1, self.q2, self.q3], wait=True)
+        self.move_group_arm.go([self.q1, self.q2, self.q3, 0], wait=True)
         self.move_group_arm.stop()
         rospy.sleep(10)
 
-        self.two_RIK(0, 0, 2)
+        self.two_RIK(0, 0, 5)
         ## Move the arm
-        self.move_group_arm.go([self.q1, self.q2, self.q3], wait=True)
+        self.move_group_arm.go([self.q1, self.q2, self.q3, 0], wait=True)
         self.move_group_arm.stop()
         rospy.sleep(10)
 
