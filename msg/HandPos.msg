@@ -1,4 +1,4 @@
 Header header
-int16 xpos
-int16 ypos
-int16 zpos
+geometry_msgs/Point point
+float64 gripper_value
+float64 tilt_angle
