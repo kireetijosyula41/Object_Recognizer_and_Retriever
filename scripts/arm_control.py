@@ -3,6 +3,7 @@
 import cv_bridge
 import rospy
 from geometry_msgs.msg import Twist, Vector3
+from sensor_msgs.msg import JointState
 import moveit_commander
 
 import cv2
@@ -21,20 +22,16 @@ class ActionHandler:
         self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
         ## Interface to control arm gripper
         self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
-
+        ## Retrieves current joint angles for inverse kinematics
+        self.joint_angle_sub = rospy.Subscriber(
+            "joint_states", JointState, self.get_joint_angles
+        )
 
         #### Constants
-        ## Minimum and maximum r value for the coordinate system
-        self.r_min = 0.1
-        self.r_max = 0.8
-
-        ## Minimum and maximum theta (angle about x axis) value for the coordinate system
-        self.theta_min = 0.0
-        self.theta_max = (180.0) * (math.pi / 180) 
-
-        ## Minimum and maximum psi (angle about z axis) value for the coordinate system
-        self.theta_min = 0.0
-        self.theta_max = (360.0) * (math.pi / 180) 
+        ## Minimum and maximum joint angles for the robot arm
+        self.q1_range = [-162 * (180 / math.pi), 162 * (180 / math.pi)]
+        self.q2_range = [-103 * (180 / math.pi), 90 * (180 / math.pi)]
+        self.q3_range = [-53 * (180 / math.pi), 79 * (180 / math.pi)]
 
         ## Constants for arm dimensions (https://emanual.robotis.com/docs/en/platform/openmanipulator_x/specification/#dimension)
         self.l1 = 12.8
@@ -46,47 +43,61 @@ class ActionHandler:
         self.q2 = 0
         self.q3 = 0
 
+        ## Storing values for current angles
+        self.q1_current = 0
+        self.q2_current = 0
+        self.q3_current = 0
+
+    def get_joint_angles(self, jointstate):
+        self.q1_current = jointstate.position[3]
+        self.q2_current = jointstate.position[4]
+        self.q3_current = jointstate.position[5]
+
     ## Perform a 2RIK calculation.
     ## For a 3R manipulator, we can calculate the 2nd and 3rd angles of the arm using planar calculations
     ## Sets q2 and q3 values
-    def two_RIK(self, x, y, z):
+    def two_RIK(self, y, x, z):
         print("Attempting to move to angle {0} {1} {2}".format(x, y, z))
-        ## Find the cosine of the 2nd angle
-        ## Move the frame of reference to consider the 2D calculations
-        norm = math.sqrt(x*x + y*y)
-        cos2 = (norm - (self.l1 * self.l1) - (self.l2 * self.l2)) / (2 * self.l1 * self.l2)
-        ## If cos2 is greater than 1, the movement does not have a solution
-        if abs(cos2) > 1:
-            print('Error: No solution found for target position x:{0}, y:{1}, z:{2}'.format(x, y, z))
-            return
-        ## If cos2 is 1, q3 = 0
-        if cos2 == 1:
-            self.q2 = math.atan2(y, x)
-            self.q3 = 0
-        ## If cos2 is equal to -1, and the target x coordinate is not 0, q3 = pi
-        if cos2 == -1 and x != 0:
-            self.q2 = math.atan2(y, x)
-            self.q3 = math.pi
-            return
-        ## If cos2 == -1, there are 2 solutions
-        if cos2 == -1 and x == 0:
-            self.q2 = math.atan()
-        
-        ## Otherwise, find the remaining possible solutions
-        q3_a = math.acos(cos2)
-        q3_b = -1 * math.acos(cos2)
-        theta = math.atan2(y, x)
+        ## Find the position of the second joint
+        p3_y = y - self.l2*math.cos(self.q1_current + self.q2_current + self.q3_current)
+        p3_z = z - self.l2*math.cos(self.q1_current + self.q2_current + self.q3_current)
 
-        q2_a = theta - math.atan2(self.l2 * math.sin(q3_a), self.l1 + self.l2*math.cos(q3_a))
-        q2_b = theta - math.atan2(self.l2 * math.sin(q3_b), self.l1 + self.l2*math.cos(q3_b))
+        print(p3_y)
+        print(p3_z)
+        print((p3_y * p3_y + p3_z * p3_z - self.l1 * self.l1 - self.l2 * self.l2))
+        print((2 * self.l1 * self.l2))
+        
+        ## Get angles between joints
+        alpha = math.acos((p3_y * p3_y + p3_z * p3_z - self.l1 * self.l1 - self.l2 * self.l2) / (2 * self.l1 * self.l2))
+        beta = math.asin((self.l2 * math.sin(alpha)) / (math.sqrt(p3_y*p3_y + p3_z*p3_z)))
+        
+        ## Find the remaining possible solutions
+        q1_a = math.atan(p3_z / p3_y) - beta
+        q1_b = math.atan(p3_z / p3_y) + beta
+
+        q2_a = math.pi - alpha
+        q2_b = -1*(math.pi - alpha)
+
+        q3_a = (self.q1_current + self.q2_current + self.q3_current) - q1_a - q2_a
+        q3_b = (self.q1_current + self.q2_current + self.q3_current) - q1_b - q2_b
 
         ## Find the best solution
-        ## Arbitrarily select the first angles
-        self.q2 = q2_a * (math.pi / 180)
-        self.q3 = q3_a * (math.pi / 180)
+        print("SOL1: q1:{0}, q2:{1}, q3:{2}".format(q1_a, q2_a, q3_a))
+        print("SOL2: q1:{0}, q2:{1}, q3:{2}".format(q1_a, q2_a, q3_b))
+        print("SOL3: q1:{0}, q2:{1}, q3:{2}".format(q1_b, q2_b, q3_a))
+        print("SOL4: q1:{0}, q2:{1}, q3:{2}".format(q1_b, q2_b, q3_b))
+        if (q1_a < self.q1_range[0] or q1_a > self.q1_range[1]) or (q2_a < self.q1_range[0] or q1_a > self.q1_range[1]) or (q1_a < self.q1_range[0] or q1_a > self.q1_range[1]):
+            self.q1 = q1_b
+            self.q2 = q2_b
+        else:
+            self.q1 = q1_a
+            self.q2 = q2_a
 
-        ## The first angle value is always the same
-        self.q1 = math.atan2(y, x) * (math.pi / 180)
+        if q3_a < self.q3_range[0] or q3_a > self.q3_range[1]:
+            self.q3 = q3_b
+        else:
+            self.q3 = q3_a
+
 
         print("q1: {0}, q2:{1}, q3:{2}".format(self.q1, self.q2, self.q3))
 
@@ -102,24 +113,25 @@ class ActionHandler:
         # while not rospy.is_shutdown():
         #     pass
 
-        # rate.sleep()
-        self.two_RIK(50, 50, 0)
-        ## Move the arm
-        self.move_group_arm.go([self.q1, self.q2, self.q3, 0], wait=True)
-        self.move_group_arm.stop()
-        rospy.sleep(10)
-
-        self.two_RIK(0, 0, 0)
-        ## Move the arm
-        self.move_group_arm.go([self.q1, self.q2, self.q3, 0], wait=True)
-        self.move_group_arm.stop()
-        rospy.sleep(10)
+        print("Current joint angles: {0} : {1} : {2}".format(self.q1_current, self.q2_current, self.q3_current))
 
         self.two_RIK(0, 0, 5)
         ## Move the arm
-        self.move_group_arm.go([self.q1, self.q2, self.q3, 0], wait=True)
+        self.move_group_arm.go((0, self.q1, self.q2, self.q3), wait=True)
         self.move_group_arm.stop()
-        rospy.sleep(10)
+        rospy.sleep(7)
+
+        self.two_RIK(-25, 0, 5)
+        ## Move the arm
+        self.move_group_arm.go((0, self.q1, self.q2, self.q3), wait=True)
+        self.move_group_arm.stop()
+        rospy.sleep(7)
+
+        self.two_RIK(0, 0, 5)
+        ## Move the arm
+        self.move_group_arm.go((0, self.q1, self.q2, self.q3), wait=True)
+        self.move_group_arm.stop()
+        rospy.sleep(7)
 
 
 if __name__ == "__main__":
