@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import rospy
 import numpy as np
 import math
@@ -87,23 +88,23 @@ class HandCapture:
         HAND_MISSING_THRESHOLD = 30  # Number of frames to wait before resetting
 
         try:
-            #while not rospy.is_shutdown():
-            while True: #TODO: replace above when integrated
+            while not rospy.is_shutdown():
                 # Check for the presence of the left hand
                 frame, hands, bag = self.tracker.next_frame()
 
                 if hands:
                     hand_missing_counter = 0  # Reset counter as hand is present
 
-                    camera_height = 33 * 2.54 #convert camera height to 33in in cm
+                    camera_height = 80 #80cm above the table ground
                     wrist_xyz0 = hands[0].xyz / 10.0 # in cm
                     #print(wrist_xyz0[2])
                     wrist_xyz0[2] =camera_height -wrist_xyz0[2] # this is the height from floor
+                    if  wrist_xyz0[2] < 0:  wrist_xyz0[2] = 0
 
                     if initial_hand_position is None:
                         initial_hand_position = wrist_xyz0
 
-                     # Calculate relative X and Y, keep Z absolute
+                     # Calculate relative X and Y, keep Z absolute based on the first time hand been detected
                     relative_position = wrist_xyz0 - initial_hand_position
                     relative_position[2] = wrist_xyz0[2]
 

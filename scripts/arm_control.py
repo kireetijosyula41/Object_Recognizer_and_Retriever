@@ -16,7 +16,7 @@ class ActionHandler:
     def __init__(self):
         #### Publishers and subscribers
         ## Subscribes to end_position topic, receives (x, y, z) coordinate of arm goal
-        # self.end_pos_sub = rospy.Subscriber("end_position", HandPos, self.set_end_pos, queue_size=10)
+        # self.end_pos_sub = rospy.Subscriber("hand_control_topic", HandPos, self.set_end_pos, queue_size=10)
         ## Interface to control arm movement
         self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
         ## Interface to control arm gripper
