@@ -4,6 +4,7 @@ import cv_bridge
 import rospy
 from geometry_msgs.msg import Twist, Vector3
 from sensor_msgs.msg import JointState
+from Object_Recognizer_and_Retriever.msg import HandPos
 import moveit_commander
 
 import cv2
@@ -22,12 +23,16 @@ class ActionHandler:
         self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
         ## Interface to control arm gripper
         self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
-        ## Retrieves current joint angles for inverse kinematics
+        # ## Retrieves current joint angles for inverse kinematics
+        # self.joint_angle_sub = rospy.Subscriber(
+        #     "joint_states", JointState, self.get_joint_angles
+        # )
+        ## Retrieves hand data from camera
         self.joint_angle_sub = rospy.Subscriber(
-            "joint_states", JointState, self.get_joint_angles
+            "hand_control_topic", HandPos, self.get_hand_pos
         )
 
-        #### Constants
+        #### Constants and variables
         ## Minimum and maximum joint angles for the robot arm
         self.q1_range = [-162 * (math.pi / 180), 162 * (math.pi / 180)]
         self.q2_range = [-102 * (math.pi / 180), 83 * (math.pi / 180)]
@@ -47,6 +52,16 @@ class ActionHandler:
         self.q1_current = 0
         self.q2_current = 0
         self.q3_current = 0
+
+        ## Storing values for target position
+        self.target_x = 0
+        self.target_y = 0
+        self.target_z = 5
+
+    def get_hand_pos(self, hand):
+        self.target_x = hand.point.x
+        self.target_y = hand.point.y
+        self.target_z = hand.point.z
 
     def get_joint_angles(self, jointstate):
         # print(jointstate.position)
@@ -165,59 +180,14 @@ class ActionHandler:
 
     ## Main loop of execution
     def run(self):
-        # rate = rospy.Rate(30)
-        # while not rospy.is_shutdown():
-        #     pass
-        rospy.sleep(0.5)
-        print("Current joint angles: {0}".format(self.rads3([self.q1_current, self.q2_current, self.q3_current])))
+        while not rospy.is_shutdown():
+            self.two_RIK(self.target_x, self.target_y, self.target_z)
+            ## Raise the arm
+            self.move_group_arm.go([0, self.q2, self.q3, -100 * (math.pi/180)], wait=False)
+            self.move_group_arm.stop()
+            rospy.sleep(0.1)
+        # print("Current joint angles: {0}".format(self.rads3([self.q1_current, self.q2_current, self.q3_current])))
 
-        self.two_RIK(0, 0, 5)
-        # Move the arm
-        self.move_group_arm.go((0.8, self.q1, self.q2, self.q3), wait=True)
-        self.move_group_arm.stop()
-        rospy.sleep(7)
-
-        self.two_RIK(0, 5, 0)
-        # Move the arm
-        self.move_group_arm.go((0.8, self.q1, self.q2, self.q3), wait=True)
-        self.move_group_arm.stop()
-        rospy.sleep(7)
-
-        self.two_RIK(0, 5, 5)
-        # Move the arm
-        self.move_group_arm.go((0.8, self.q1, self.q2, self.q3), wait=True)
-        self.move_group_arm.stop()
-        rospy.sleep(7)
-
-        self.two_RIK(0, 10, 0)
-        ## Move the arm
-        self.move_group_arm.go((0.8, self.q1, self.q2, self.q3), wait=True)
-        self.move_group_arm.stop()
-        rospy.sleep(7)
-
-        self.two_RIK(0, 15, 0)
-        ## Move the arm
-        self.move_group_arm.go((0.8, self.q1, self.q2, self.q3), wait=True)
-        self.move_group_arm.stop()
-        rospy.sleep(7)
-
-        self.two_RIK(0, 20, -5)
-        ## Move the arm
-        self.move_group_arm.go((0.8, self.q1, self.q2, self.q3), wait=True)
-        self.move_group_arm.stop()
-        rospy.sleep(7)
-
-        self.two_RIK(0, 20, -10)
-        # ## Move the arm
-        self.move_group_arm.go((0.8, self.q1, self.q2, self.q3), wait=True)
-        self.move_group_arm.stop()
-        rospy.sleep(7)
-
-        self.two_RIK(0, 5, 1)
-        # ## Move the arm
-        self.move_group_arm.go((0.8, self.q1, self.q2, self.q3), wait=True)
-        self.move_group_arm.stop()
-        rospy.sleep(7)
 
 
 if __name__ == "__main__":
