@@ -10,7 +10,7 @@ import moveit_commander
 import cv2
 import numpy as np
 import math
-import pandas as pd
+
 import os
 
 
@@ -37,6 +37,7 @@ class ActionHandler:
         self.q1_range = [-162 * (math.pi / 180), 162 * (math.pi / 180)]
         self.q2_range = [-102 * (math.pi / 180), 83 * (math.pi / 180)]
         self.q3_range = [-54 * (math.pi / 180), 79 * (math.pi / 180)]
+        self.tilt_range = [-90, 90]
 
         self.simulation = False
 
@@ -59,11 +60,17 @@ class ActionHandler:
         self.target_x = 0
         self.target_y = 0
         self.target_z = 5
+        self.tilt_angle = 0
 
     def get_hand_pos(self, hand):
-        self.target_x = hand.point.x
-        self.target_y = hand.point.y
-        self.target_z = hand.point.z
+        self.target_x = hand.point.x / 10.0
+        self.target_y = hand.point.y / 10.0
+        self.target_z = hand.point.z / 10.0
+
+        self.tilt_angle = hand.tilt_angle
+        print("Received tilt angle: {0}".format(hand.tilt_angle))
+
+
 
     def get_joint_angles(self, jointstate):
         # print(jointstate.position)
@@ -132,7 +139,8 @@ class ActionHandler:
 
         # Check if the target position is reachable
         if distance > link1_length + link2_length or distance < abs(link1_length - link2_length):
-            raise ValueError("Target position is not reachable.")
+            print("Target position is not reachable.")
+            return
 
         # Calculate the angle between the line connecting the joints and the x-axis
         alpha = math.atan2(z, y)
@@ -168,6 +176,16 @@ class ActionHandler:
 
         print("q1: {0}, q2:{1}, q3:{2}".format(self.q1 * (180 / math.pi), self.q2* (180 / math.pi), self.q3* (180 / math.pi)))
 
+    def set_tilt(self, tilt_angle):
+        if tilt_angle < self.tilt_range[0]:
+            self.tilt_angle = self.tilt_range[0]
+        if tilt_angle > self.tilt_range[1]:
+            self.tilt_angle = self.tilt_range[1]
+
+        print("Calculated tilt angle (deg): {0}".format(self.tilt_angle))
+        self.tilt_angle = self.tilt_angle * (math.pi / 180)
+        print("Calculated tilt angle (rad): {0}".format(self.tilt_angle))
+
     ## Camera data should be converted to cartesian coordinates (x, y, z).
     ## Based on the limitations of the arm movements, set a limited domain and set
     ## coordinates outside of this domain to the nearest possible point.
@@ -185,10 +203,11 @@ class ActionHandler:
         if not self.simulation:
             while not rospy.is_shutdown():
                 self.two_RIK(self.target_x, self.target_y, self.target_z)
+                self.set_tilt(self.tilt_angle)
                 ## Raise the arm
-                self.move_group_arm.go((0, self.q1, self.q2, -100 * (math.pi/180)), wait=False)
+                self.move_group_arm.go((0, self.q1, self.q2, self.tilt_angle), wait=False)
                 self.move_group_arm.stop()
-                rospy.sleep(0.1)
+                rospy.sleep(1)
         # print("Current joint angles: {0}".format(self.rads3([self.q1_current, self.q2_current, self.q3_current])))
         else:
             ## Simulate hand camera data
@@ -236,7 +255,6 @@ class ActionHandler:
             self.move_group_arm.go((0, self.q1, self.q2, -100 * (math.pi/180)), wait=True)
             self.move_group_arm.stop()
             rospy.sleep(0.1)
-
 
 
 if __name__ == "__main__":

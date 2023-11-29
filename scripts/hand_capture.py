@@ -61,7 +61,7 @@ class HandCapture:
         # Calculate the angle in radians
         angle_rad = math.acos(dot_product / (mag_d * mag_d_xy))
 
-        if d[2] > 0:
+        if d[2] < 0:
             angle_rad = -angle_rad
 
         angle_deg = math.degrees(angle_rad)
@@ -141,7 +141,7 @@ class HandCapture:
                 if frame is None: break
 
                 # Draw hands
-                frame = self.renderer.draw(frame, hands, bag)
+                frame = self.renderer.draw(q, hands, bag)
                 key = self.renderer.waitKey(delay=1)
                 if key == 27 or key == ord('q'):
                     break
