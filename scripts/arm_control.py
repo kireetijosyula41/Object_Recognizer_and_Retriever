@@ -38,6 +38,8 @@ class ActionHandler:
         self.q2_range = [-102 * (math.pi / 180), 83 * (math.pi / 180)]
         self.q3_range = [-54 * (math.pi / 180), 79 * (math.pi / 180)]
 
+        self.simulation = False
+
         ## Constants for arm dimensions (https://emanual.robotis.com/docs/en/platform/openmanipulator_x/specification/#dimension)
         self.l1 = 12.8
         self.l2 = 12.4 
@@ -180,13 +182,60 @@ class ActionHandler:
 
     ## Main loop of execution
     def run(self):
-        while not rospy.is_shutdown():
-            self.two_RIK(self.target_x, self.target_y, self.target_z)
-            ## Raise the arm
-            self.move_group_arm.go([0, self.q2, self.q3, -100 * (math.pi/180)], wait=False)
+        if not self.simulation:
+            while not rospy.is_shutdown():
+                self.two_RIK(self.target_x, self.target_y, self.target_z)
+                ## Raise the arm
+                self.move_group_arm.go((0, self.q1, self.q2, -100 * (math.pi/180)), wait=False)
+                self.move_group_arm.stop()
+                rospy.sleep(0.1)
+        # print("Current joint angles: {0}".format(self.rads3([self.q1_current, self.q2_current, self.q3_current])))
+        else:
+            ## Simulate hand camera data
+            self.two_RIK(0, 5, 1)
+            self.move_group_arm.go((0, self.q1, self.q2, -100 * (math.pi/180)), wait=True)
             self.move_group_arm.stop()
             rospy.sleep(0.1)
-        # print("Current joint angles: {0}".format(self.rads3([self.q1_current, self.q2_current, self.q3_current])))
+
+            self.two_RIK(0, 5, 4)
+            self.move_group_arm.go((0, self.q1, self.q2, -100 * (math.pi/180)), wait=True)
+            self.move_group_arm.stop()
+            rospy.sleep(0.1)
+
+            self.two_RIK(0, 5, 3)
+            self.move_group_arm.go([0, self.q1, self.q2, -100 * (math.pi/180)], wait=True)
+            self.move_group_arm.stop()
+            rospy.sleep(0.1)
+
+            self.two_RIK(0, 6, 3)
+            self.move_group_arm.go((0, self.q1, self.q2, -100 * (math.pi/180)), wait=True)
+            self.move_group_arm.stop()
+            rospy.sleep(0.1)
+
+            self.two_RIK(0, 4, 5)
+            self.move_group_arm.go((0, self.q1, self.q2, -100 * (math.pi/180)), wait=True)
+            self.move_group_arm.stop()
+            rospy.sleep(0.1)
+
+            self.two_RIK(0, 5, 5)
+            self.move_group_arm.go((0, self.q1, self.q2, -100 * (math.pi/180)), wait=True)
+            self.move_group_arm.stop()
+            rospy.sleep(0.1)
+
+            self.two_RIK(0, 6, 5)
+            self.move_group_arm.go((0, self.q1, self.q2, -100 * (math.pi/180)), wait=True)
+            self.move_group_arm.stop()
+            rospy.sleep(0.1)
+
+            self.two_RIK(0, 7, 4)
+            self.move_group_arm.go((0, self.q1, self.q2, -100 * (math.pi/180)), wait=True)
+            self.move_group_arm.stop()
+            rospy.sleep(0.1)
+
+            self.two_RIK(0, 8, 3)
+            self.move_group_arm.go((0, self.q1, self.q2, -100 * (math.pi/180)), wait=True)
+            self.move_group_arm.stop()
+            rospy.sleep(0.1)
 
 
 
