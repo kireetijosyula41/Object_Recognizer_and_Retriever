@@ -7,10 +7,10 @@
 	<object>
 		<name>pen</name>
 		<bndbox>
-			<xmin>418</xmin>
-			<xmax>440</xmax>
-			<ymin>240</ymin>
-			<ymax>387</ymax>
+			<xmin>46</xmin>
+			<xmax>68</xmax>
+			<ymin>267</ymin>
+			<ymax>414</ymax>
 		</bndbox>
 	</object>
 </annotation>

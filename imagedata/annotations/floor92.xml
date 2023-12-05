@@ -5,12 +5,12 @@
 		<height>480</height>
 	</size>
 	<object>
-		<name>pen</name>
+		<name>bottle</name>
 		<bndbox>
-			<xmin>359</xmin>
-			<xmax>381</xmax>
-			<ymin>278</ymin>
-			<ymax>425</ymax>
+			<xmin>525</xmin>
+			<xmax>576</xmax>
+			<ymin>247</ymin>
+			<ymax>431</ymax>
 		</bndbox>
 	</object>
 </annotation>

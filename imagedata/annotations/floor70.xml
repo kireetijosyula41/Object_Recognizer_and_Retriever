@@ -7,10 +7,10 @@
 	<object>
 		<name>cube</name>
 		<bndbox>
-			<xmin>156</xmin>
-			<xmax>322</xmax>
-			<ymin>294</ymin>
-			<ymax>468</ymax>
+			<xmin>10</xmin>
+			<xmax>134</xmax>
+			<ymin>237</ymin>
+			<ymax>367</ymax>
 		</bndbox>
 	</object>
 </annotation>

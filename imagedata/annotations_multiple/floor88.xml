@@ -7,10 +7,10 @@
 	<object>
 		<name>ball</name>
 		<bndbox>
-			<xmin>126</xmin>
-			<xmax>162</xmax>
-			<ymin>361</ymin>
-			<ymax>397</ymax>
+			<xmin>488</xmin>
+			<xmax>524</xmax>
+			<ymin>414</ymin>
+			<ymax>450</ymax>
 		</bndbox>
 	</object>
 </annotation>

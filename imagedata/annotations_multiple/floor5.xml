@@ -7,10 +7,10 @@
 	<object>
 		<name>bottle</name>
 		<bndbox>
-			<xmin>13</xmin>
-			<xmax>64</xmax>
-			<ymin>231</ymin>
-			<ymax>415</ymax>
+			<xmin>349</xmin>
+			<xmax>400</xmax>
+			<ymin>185</ymin>
+			<ymax>369</ymax>
 		</bndbox>
 	</object>
 </annotation>
