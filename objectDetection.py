@@ -22,9 +22,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models
 
+label = '_multiple'
 # CHANGE THESE PATHS ACCORDING TO YOUR NEED (eg /imagedata/images)
-images_path = Path('./dataset/images')
-anno_path = Path('./dataset/annotations')
+images_path = Path("./dataset/images" + label)
+anno_path = Path("./dataset/annotations" + label)
 
 def filelist(root, file_type):
     """Returns a fully-qualified list of filenames under root directory"""
@@ -56,8 +57,6 @@ class_dict = {'ball': 0, 'cube': 1, 'bottle': 2, 'pen': 3, 'nothing': 4}
 rev_class_dict = {value: key for key, value in class_dict.items()}
 df_train['class'] = df_train['class'].apply(lambda x:  class_dict[x])
 
-print(df_train.shape)
-df_train.head()
 
 #Reading an image
 def read_image(path):
@@ -99,6 +98,7 @@ def resize_image_bb(read_path,write_path,bb,sz):
 #Populating Training DF with new paths and bounding boxes
 new_paths = []
 new_bbs = []
+# CHANGE THESE PATHS ACCORDING TO YOUR NEED (eg /imagedata/images)
 train_path_resized = Path('./dataset/images_resized')
 for index, row in df_train.iterrows():
     new_path,new_bb = resize_image_bb(row['filename'], train_path_resized, create_bb_array(row.values),300)
@@ -198,6 +198,7 @@ plt.show()
 df_train = df_train.reset_index()
 
 X = df_train[['new_path', 'new_bb']]
+print("x", X)
 Y = df_train['class']
 
 X_train, X_val, y_train, y_val = train_test_split(X, Y, test_size=0.2, random_state=42)
@@ -223,21 +224,17 @@ class ImageDataset(Dataset):
         y_class = self.y[idx]
         x = cv2.imread(str(path)).astype(np.float32)
         x = cv2.cvtColor(x, cv2.COLOR_BGR2RGB) / 255
-        Y = create_mask(bb, x)
-        y_bb = mask_to_bb(Y)
         # x, y_bb = transformsXY(path, self.bb[idx], self.transforms)
         x = normalize(x)
         x = np.rollaxis(x, 2)
-        return x, y_class, y_bb
+        return x, y_class, self.bb[idx]
 
-train_ds = ImageDataset(X_train['new_path'],X_train['new_bb'] ,y_train, transforms=True)
-valid_ds = ImageDataset(X_val['new_path'],X_val['new_bb'],y_val)
+train_ds = ImageDataset(X_train['new_path'],X_train['new_bb'], y_train, transforms=True)
+valid_ds = ImageDataset(X_val['new_path'],X_val['new_bb'], y_val)
 
-batch_size = 10
+batch_size = 25
 train_dl = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
 valid_dl = DataLoader(valid_ds, batch_size=batch_size)
-print(len(train_dl), len(valid_dl))
-
 
 class BB_model(nn.Module):
     def __init__(self):
@@ -267,9 +264,9 @@ def train_epocs(model, optimizer, train_dl, valid_dl, epochs=10,C=1000):
         model.train()
         total = 0
         sum_loss = 0
-        for x, y_class, y_bb in train_dl:
+        for j, (x, y_class, y_bb) in enumerate(train_dl):
             # print(x, y_class, y_bb)
-            print("new")
+            print("new batch", j)
             batch = y_class.shape[0]
             x = x.float()
             y_class = y_class
@@ -312,18 +309,20 @@ def val_metrics(model, valid_dl, C=1000):
     return sum_loss/total, correct/total
 
 model = BB_model()
-model.load_state_dict(torch.load('trained_model_nothing'))
+model.load_state_dict(torch.load('trained_model' + label))
 model.eval()
-'''   
+
+
 parameters = filter(lambda p: p.requires_grad, model.parameters())
-optimizer = torch.optim.Adam(parameters, lr=0.01)
+optimizer = torch.optim.Adam(parameters, lr=0.005)
 
 train_epocs(model, optimizer, train_dl, valid_dl, epochs=10)
-torch.save(model.state_dict(), 'trained_model_nothing')
-'''
+torch.save(model.state_dict(), 'trained_model' + label)
+
+label = ''
 # resizing test image
 # CHANGE THESE PATHS ACCORDING TO YOUR NEED (eg /imagedata/test)
-im = read_image('./dataset/images/floor98.png')
+im = read_image('./dataset/images' + label + '/floor2.png')
 im = cv2.resize(im, (int(1.49*300), 300))
 cv2.imwrite('./dataset/test/test_resized.png', cv2.cvtColor(im, cv2.COLOR_RGB2BGR))
 # test Dataset
@@ -332,7 +331,7 @@ x, y_class, y_bb = test_ds[0]
 xx = torch.FloatTensor(x[None,])
 # prediction
 out_class, out_bb = model(xx)
-print("out class", rev_class_dict[torch.argmax(out_class, 1).tolist()[0]])
+print("out class", rev_class_dict[torch.argmax(out_class, 1).tolist()[0]], out_class)
 print("bounding box", out_bb)
 
 # predicted bounding box
