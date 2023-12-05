@@ -1,0 +1,16 @@
+<annotation>
+	<filename>floor30.png</filename>
+	<size>
+		<width>638</width>
+		<height>480</height>
+	</size>
+	<object>
+		<name>ball</name>
+		<bndbox>
+			<xmin>241</xmin>
+			<xmax>277</xmax>
+			<ymin>319</ymin>
+			<ymax>355</ymax>
+		</bndbox>
+	</object>
+</annotation>

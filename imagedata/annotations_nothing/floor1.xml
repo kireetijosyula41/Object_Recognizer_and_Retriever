@@ -1,0 +1,16 @@
+<annotation>
+	<filename>floor1.png</filename>
+	<size>
+		<width>0</width>
+		<height>0</height>
+	</size>
+	<object>
+		<name>nothing</name>
+		<bndbox>
+			<xmin>0</xmin>
+			<xmax>0</xmax>
+			<ymin>0</ymin>
+			<ymax>0</ymax>
+		</bndbox>
+	</object>
+</annotation>
