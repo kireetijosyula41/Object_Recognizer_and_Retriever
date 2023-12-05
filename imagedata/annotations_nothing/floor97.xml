@@ -1,0 +1,16 @@
+<annotation>
+	<filename>floor97.png</filename>
+	<size>
+		<width>638</width>
+		<height>480</height>
+	</size>
+	<object>
+		<name>bottle</name>
+		<bndbox>
+			<xmin>583</xmin>
+			<xmax>634</xmax>
+			<ymin>194</ymin>
+			<ymax>378</ymax>
+		</bndbox>
+	</object>
+</annotation>

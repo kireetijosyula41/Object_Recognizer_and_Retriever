@@ -1,0 +1,16 @@
+<annotation>
+	<filename>floor50.png</filename>
+	<size>
+		<width>638</width>
+		<height>480</height>
+	</size>
+	<object>
+		<name>cube</name>
+		<bndbox>
+			<xmin>353</xmin>
+			<xmax>477</xmax>
+			<ymin>252</ymin>
+			<ymax>382</ymax>
+		</bndbox>
+	</object>
+</annotation>

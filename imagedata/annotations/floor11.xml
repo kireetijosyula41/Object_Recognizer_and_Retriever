@@ -1,0 +1,16 @@
+<annotation>
+	<filename>floor11.png</filename>
+	<size>
+		<width>638</width>
+		<height>480</height>
+	</size>
+	<object>
+		<name>pen</name>
+		<bndbox>
+			<xmin>279</xmin>
+			<xmax>301</xmax>
+			<ymin>275</ymin>
+			<ymax>422</ymax>
+		</bndbox>
+	</object>
+</annotation>
