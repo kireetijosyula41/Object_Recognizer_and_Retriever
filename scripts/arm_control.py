@@ -58,6 +58,7 @@ class ActionHandler:
         self.q1_range = [np.radians(-103), np.radians(90)]
         self.q2_range = [np.radians(-54), np.radians(79)]
         self.q3_range = [np.radians(-103), np.radians(117)]
+        self.grip_range = [-0.010, 0.019]
 
         ## Storing values for current angles
         self.q1_current = 0
@@ -66,26 +67,26 @@ class ActionHandler:
 
         ## Storing values for target position
         self.target_x = 0
-        self.target_y = 5
+        self.target_y = 10
         self.target_z = 5
         self.tilt_angle = 0
+        self.true_z = 0
+        self.gripper_target = 0
 
     def get_hand_pos(self, hand):
+        # print("Received point:{0}".format(hand.point))
         self.target_x = hand.point.x
         self.target_y = hand.point.y
-        self.target_z = -(hand.point.z - 59.0)
+        self.target_z = hand.point.z
+        self.true_z = hand.point.z
+
+        self.gripper_target = self.clamp(self.grip_range, hand.gripper_value)
+        print("GRIPGRIP:{0}".format(self.gripper_target))
 
         self.tilt_angle = hand.tilt_angle
-        print("Received tilt angle: {0}".format(hand.tilt_angle))
+        # print("Received tilt angle: {0}".format(hand.tilt_angle))
 
 
-
-    def get_joint_angles(self, jointstate):
-        # print(jointstate.position)
-        if len(jointstate.position) >= 6:
-            self.q1_current = jointstate.position[3]
-            self.q2_current = jointstate.position[4]
-            self.q3_current = jointstate.position[5]
 
     ## Perform a 2RIK calculation.
     ## For a 3R manipulator, we can calculate the 2nd and 3rd angles of the arm using planar calculations
@@ -166,6 +167,7 @@ class ActionHandler:
 
         ## Ensure all angles are within tolerances
         self.q1 = self.clamp(self.q1_range, q1a)
+        print(self.clamp(self.q1_range, q1a))
         self.q2 = self.clamp(self.q2_range, q2a)
 
         # print("q0: {3}, q1b: {0}, q2b:{1}, q3:{2}".format(np.degrees(q1b), np.degrees(q2b), self.q3* (180 / math.pi), self.q0))
@@ -173,9 +175,9 @@ class ActionHandler:
 
     def clamp(self, r, value):
         if value < r[0]:
-            value = r[0]
+            return r[0]
         elif value > r[1]:
-            value = r[1]
+            return r[1]
 
         return value
 
@@ -222,10 +224,13 @@ class ActionHandler:
     def run(self):
         if not self.simulation:
             while not rospy.is_shutdown():
+                print("{0} -> {1}".format(self.true_z, self.target_z))
                 self.two_RIK(self.target_x, self.target_y, self.target_z)
                 self.set_tilt(self.tilt_angle)
                 ## Raise the arm
                 self.move_group_arm.go((0, self.q1, self.q2, self.tilt_angle), wait=False)
+                rospy.sleep(0.1)
+                self.move_group_gripper.go((self.gripper_target, self.gripper_target), wait=False)
                 rospy.sleep(0.1)
         # print("Current joint angles: {0}".format(self.rads3([self.q1_current, self.q2_current, self.q3_current])))
         else:
