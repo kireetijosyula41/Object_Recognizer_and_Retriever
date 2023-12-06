@@ -33,15 +33,6 @@ class ActionHandler:
         )
 
         #### Constants and variables
-<<<<<<< Updated upstream
-        ## Minimum and maximum joint angles for the robot arm
-        self.q1_range = [-162 * (math.pi / 180), 162 * (math.pi / 180)]
-        self.q2_range = [-102 * (math.pi / 180), 83 * (math.pi / 180)]
-        self.q3_range = [-54 * (math.pi / 180), 79 * (math.pi / 180)]
-        self.tilt_range = [-90, 90]
-
-=======
->>>>>>> Stashed changes
         self.simulation = False
 
         ## Constants for arm dimensions (https://emanual.robotis.com/docs/en/platform/openmanipulator_x/specification/#dimension)
@@ -62,6 +53,12 @@ class ActionHandler:
         self.q2 = 0
         self.q3 = -102.0 * (math.pi / 180)
 
+        ## Angle ranges
+        self.q0_range = [np.radians(-162), np.radians(162)]
+        self.q1_range = [np.radians(-103), np.radians(90)]
+        self.q2_range = [np.radians(-54), np.radians(79)]
+        self.q3_range = [np.radians(-103), np.radians(117)]
+
         ## Storing values for current angles
         self.q1_current = 0
         self.q2_current = 0
@@ -74,9 +71,9 @@ class ActionHandler:
         self.tilt_angle = 0
 
     def get_hand_pos(self, hand):
-        self.target_x = hand.point.x / 10.0
-        self.target_y = hand.point.y / 10.0
-        self.target_z = hand.point.z / 10.0
+        self.target_x = hand.point.x
+        self.target_y = hand.point.y
+        self.target_z = -(hand.point.z - 64.0)
 
         self.tilt_angle = hand.tilt_angle
         print("Received tilt angle: {0}".format(hand.tilt_angle))
@@ -105,41 +102,6 @@ class ActionHandler:
         # dist = math.sqrt(z*z + y*y)
         print("Attempting to move to position {0} {1} {2}".format(x, y, z))
 
-<<<<<<< Updated upstream
-        # Check if the target position is reachable
-        if distance > link1_length + link2_length or distance < abs(link1_length - link2_length):
-            print("Target position is not reachable.")
-            return
-
-        # Calculate the angle between the line connecting the joints and the x-axis
-        alpha = math.atan2(z, y)
-
-        # Law of cosines to find the angle at the second joint
-        cos_theta2 = (link1_length**2 + link2_length**2 - distance**2) / (2 * link1_length * link2_length)
-        sin_theta2 = math.sqrt(1 - cos_theta2**2)
-        theta2 = math.atan2(sin_theta2, cos_theta2)
-
-        # Law of sines to find the angle at the first joint
-        sin_theta1 = (link2_length * math.sin(theta2)) / distance
-        cos_theta1 = (y * (link1_length + link2_length * math.cos(theta2)) + z * link2_length * math.sin(theta2)) / (distance * (link1_length + link2_length * math.cos(theta2)))
-        theta1 = math.atan2(z / distance, y / distance) - math.atan2(sin_theta1, cos_theta1)
-        print("q1: {0}, q2:{1}, q3:{2}".format(theta1 * (180 / math.pi), theta2* (180 / math.pi), self.q3* (180 / math.pi)))
-
-        theta1 = -theta1
-        theta2 = -theta2
-
-        print("q1: {0}, q2:{1}, q3:{2}".format(theta1 * (180 / math.pi), theta2* (180 / math.pi), self.q3* (180 / math.pi)))
-
-
-        if theta1 < self.q2_range[0]:
-            theta1 = self.q2_range[0]
-        if theta1 > self.q2_range[1]:
-            theta1 = self.q2_range[1]
-        if theta2 < self.q3_range[0]:
-            theta2 = self.q3_range[0]
-        if theta2 > self.q3_range[1]:
-            theta2 = self.q3_range[1]
-=======
         y_true = y
         z_true = z
         y = abs(y)
@@ -158,7 +120,6 @@ class ActionHandler:
                 self.q0 = math.pi / 2
             else:
                 self.q0 = math.atan(x / y)
->>>>>>> Stashed changes
 
         
         q2a = math.acos(( -(self.l1**2) + -(self.l2**2) + (y*y) + (z*z) ) / (2 * self.l1 * self.l2))
@@ -177,22 +138,22 @@ class ActionHandler:
         ## Adjust angles based on quadrant
         ## Q1
         if y_true > 0.0 and z_true >= 0.0:
-            print("Q1")
+            # print("Q1")
             q1a = (math.pi / 2) - q1a
             q2a = -((math.pi / 2) - q2a)
             q1b = (math.pi / 2) - q1b
             q2b = -((math.pi / 2) - q2b)
         elif y_true == 0:
-            print("Q1/Q2 (y=0)")
+            # print("Q1/Q2 (y=0)")
             q1a = q1a
             q2a = -((math.pi / 2) - q2a)
             q1b = q1b
             q2b = -((math.pi / 2) - q2b)
         ## Q2. Mirror q1
         elif y_true < 0.0 and z_true > 0.0:
-            print("Q2")
-            print("q1b: {0}, q2b:{1}, q3:{2}".format(np.degrees(q1b), np.degrees(q2b), self.q3* (180 / math.pi)))
-            print("q1a: {0}, q2a:{1}, q3:{2}".format(np.degrees(q1a), np.degrees(q2a), self.q3* (180 / math.pi)))
+            # print("Q2")
+            # print("q1b: {0}, q2b:{1}, q3:{2}".format(np.degrees(q1b), np.degrees(q2b), self.q3* (180 / math.pi)))
+            # print("q1a: {0}, q2a:{1}, q3:{2}".format(np.degrees(q1a), np.degrees(q2a), self.q3* (180 / math.pi)))
 
             # q1a = (-q1a) - (math.pi / 2)
             # q2a = (-(math.pi / 2) + q2a)
@@ -203,17 +164,26 @@ class ActionHandler:
             q1b = -((math.pi / 2) - q1b)
             q2b = (-((math.pi / 2) - q2b))
 
-        self.q1 = q1a
-        self.q2 = q2a
+        ## Ensure all angles are within tolerances
+        self.q1 = self.clamp(self.q1_range, q1a)
+        self.q2 = self.clamp(self.q2_range, q2a)
 
-        print("q0: {3}, q1b: {0}, q2b:{1}, q3:{2}".format(np.degrees(q1b), np.degrees(q2b), self.q3* (180 / math.pi), self.q0))
+        # print("q0: {3}, q1b: {0}, q2b:{1}, q3:{2}".format(np.degrees(q1b), np.degrees(q2b), self.q3* (180 / math.pi), self.q0))
         print("q0: {3}, q1a: {0}, q2a:{1}, q3:{2}".format(np.degrees(q1a), self.q2* (180 / math.pi), self.q3* (180 / math.pi), self.q0))
 
+    def clamp(self, r, value):
+        if value < r[0]:
+            value = r[0]
+        elif value > r[1]:
+            value = r[1]
+
+        return value
+
     def set_tilt(self, tilt_angle):
-        if tilt_angle < self.tilt_range[0]:
-            self.tilt_angle = self.tilt_range[0]
-        if tilt_angle > self.tilt_range[1]:
-            self.tilt_angle = self.tilt_range[1]
+        if tilt_angle < self.q3_range[0]:
+            self.tilt_angle = self.q3_range[0]
+        if tilt_angle > self.q3_range[1]:
+            self.tilt_angle = self.q3_range[1]
 
         print("Calculated tilt angle (deg): {0}".format(self.tilt_angle))
         self.tilt_angle = self.tilt_angle * (math.pi / 180)
@@ -255,14 +225,8 @@ class ActionHandler:
                 self.two_RIK(self.target_x, self.target_y, self.target_z)
                 self.set_tilt(self.tilt_angle)
                 ## Raise the arm
-<<<<<<< Updated upstream
                 self.move_group_arm.go((0, self.q1, self.q2, self.tilt_angle), wait=False)
-                self.move_group_arm.stop()
-                rospy.sleep(1)
-=======
-                self.move_group_arm.go((0, self.q1, self.q2, -100 * (math.pi/180)), wait=False)
                 rospy.sleep(0.1)
->>>>>>> Stashed changes
         # print("Current joint angles: {0}".format(self.rads3([self.q1_current, self.q2_current, self.q3_current])))
         else:
             print(self.max_dist)
