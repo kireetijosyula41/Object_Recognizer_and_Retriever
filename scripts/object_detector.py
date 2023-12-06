@@ -13,7 +13,7 @@ from PIL import Image
 from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
-from sklearn.model_selection import train_test_splitpip 
+from sklearn.model_selection import train_test_split 
 import xml.etree.ElementTree as ET
 
 import torch
@@ -75,8 +75,7 @@ class Detecter:
         self.class_dict = {'ball': 0, 'cube': 1, "bottle": 2, "pen": 3, "nothing": 4}
         self.rev_class_dict = {value: key for key, value in self.class_dict.items()}
     
-    def detect_image(self, image):
-        im = cv2.resize(image, (638, 480))
+    def detect_image(self, im):
         cv2.imwrite('./prt_resized.png', cv2.cvtColor(im, cv2.COLOR_RGB2BGR))
         # test dataset
         test_ds = ImageDataset(pd.DataFrame([{'path':'./prt_resized.png'}])['path'],pd.DataFrame([{'bb':np.array([0,0,0,0])}])['bb'],pd.DataFrame([{'y':[0]}])['y'])
