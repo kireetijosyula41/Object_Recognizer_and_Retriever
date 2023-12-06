@@ -141,7 +141,7 @@ class HandCapture:
                 if frame is None: break
 
                 # Draw hands
-                frame = self.renderer.draw(q, hands, bag)
+                frame = self.renderer.draw(frame, hands, bag)
                 key = self.renderer.waitKey(delay=1)
                 if key == 27 or key == ord('q'):
                     break

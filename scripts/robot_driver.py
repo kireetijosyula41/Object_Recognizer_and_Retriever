@@ -16,7 +16,6 @@ from std_msgs.msg import String
 from enum import Enum, auto
 from collections import deque
 
-from itertools import *
 import math
 import sys
 
@@ -173,7 +172,7 @@ class Actions(object):
 
         # if the target object is out of the view, turn to find
         else: 
-            pprint("####  finding... ####")
+            print("####  finding... ####")
             self.trun_to_find()
 
 

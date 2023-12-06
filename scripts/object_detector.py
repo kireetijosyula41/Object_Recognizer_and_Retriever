@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 
-import rospy, cv_bridge
-from sensor_msgs.msg import Image
-from geometry_msgs.msg import Twist
-
 import os
 import random
 import math
@@ -17,7 +13,7 @@ from PIL import Image
 from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_splitpip 
 import xml.etree.ElementTree as ET
 
 import torch
@@ -71,17 +67,25 @@ class BB_model(nn.Module):
         return self.classifier(x), self.bb(x)
 
 
-class Follower:
-        def detect_image(self, image):
-            im = cv2.resize(image, (638, 480))
-            cv2.imwrite('./prt_resized.png', cv2.cvtColor(im, cv2.COLOR_RGB2BGR))
-            # test dataset
-            test_ds = ImageDataset(pd.DataFrame([{'path':'./prt_resized.png'}])['path'],pd.DataFrame([{'bb':np.array([0,0,0,0])}])['bb'],pd.DataFrame([{'y':[0]}])['y'])
-            x, y_class, y_bb = test_ds[0]
-            xx = torch.FloatTensor(x[None,])
-            # prediction
-            out_class, out_bb = self.model(xx)
-            print("out class", self.rev_class_dict[torch.argmax(out_class, 1).tolist()[0]], out_class)
-            print("bounding box", out_bb)
-            return out_bb, out_class
+class Detecter:
+    def __init__(self):
+        self.model = BB_model()
+        self.model.load_state_dict(torch.load('../trained_model'))
+        self.model.eval()
+        self.class_dict = {'ball': 0, 'cube': 1, "bottle": 2, "pen": 3, "nothing": 4}
+        self.rev_class_dict = {value: key for key, value in self.class_dict.items()}
+    
+    def detect_image(self, image):
+        im = cv2.resize(image, (638, 480))
+        cv2.imwrite('./prt_resized.png', cv2.cvtColor(im, cv2.COLOR_RGB2BGR))
+        # test dataset
+        test_ds = ImageDataset(pd.DataFrame([{'path':'./prt_resized.png'}])['path'],pd.DataFrame([{'bb':np.array([0,0,0,0])}])['bb'],pd.DataFrame([{'y':[0]}])['y'])
+        x, y_class, y_bb = test_ds[0]
+        xx = torch.FloatTensor(x[None,])
+        # prediction
+        out_class, out_bb = self.model(xx)
+        # print("out class", self.rev_class_dict[torch.argmax(out_class, 1).tolist()[0]], out_class)
+        # print("bounding box", out_bb)
+        return out_bb, torch.argmax(out_class)
+
 
