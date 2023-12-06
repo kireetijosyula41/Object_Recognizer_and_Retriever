@@ -17,7 +17,7 @@ from PIL import Image
 from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_splitpip 
 import xml.etree.ElementTree as ET
 
 import torch
