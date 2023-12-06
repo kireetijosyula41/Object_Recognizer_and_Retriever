@@ -33,7 +33,7 @@ class ActionHandler:
         )
 
         #### Constants and variables
-        self.simulation = False
+        self.simulation = True
 
         ## Constants for arm dimensions (https://emanual.robotis.com/docs/en/platform/openmanipulator_x/specification/#dimension)
         self.l1 = 12.8
@@ -55,7 +55,7 @@ class ActionHandler:
 
         ## Angle ranges
         self.q0_range = [np.radians(-162), np.radians(162)]
-        self.q1_range = [np.radians(-103), np.radians(90)]
+        self.q1_range = [np.radians(-103), np.radians(83)]
         self.q2_range = [np.radians(-54), np.radians(79)]
         self.q3_range = [np.radians(-103), np.radians(117)]
         self.grip_range = [-0.010, 0.019]
@@ -80,7 +80,7 @@ class ActionHandler:
         self.target_z = hand.point.z
         self.true_z = hand.point.z
 
-        self.gripper_target = self.clamp(self.grip_range, hand.gripper_value)
+        self.gripper_target = self.quantize([0, 0.038], self.grip_range, hand.gripper_value)
         print("GRIPGRIP:{0}".format(self.gripper_target))
 
         self.tilt_angle = hand.tilt_angle
@@ -181,6 +181,14 @@ class ActionHandler:
 
         return value
 
+    def quantize(self, interval1, interval2, value):
+        a = interval1[0]
+        b = interval1[1]
+        c = interval2[0]
+        d = interval2[1]
+
+        return c + ((d - c) / (b - a)) * (value - a)
+
     def set_tilt(self, tilt_angle):
         if tilt_angle < self.q3_range[0]:
             self.tilt_angle = self.q3_range[0]
@@ -231,10 +239,14 @@ class ActionHandler:
                 self.move_group_arm.go((0, self.q1, self.q2, self.tilt_angle), wait=False)
                 rospy.sleep(0.1)
                 self.move_group_gripper.go((self.gripper_target, self.gripper_target), wait=False)
-                rospy.sleep(0.1)
+                rospy.sleep(0.3)
         # print("Current joint angles: {0}".format(self.rads3([self.q1_current, self.q2_current, self.q3_current])))
         else:
             print(self.max_dist)
+
+            t = [0.0, 0.01, 0.02, 0.03]
+            for i in t:
+                print(self.quantize([0.0, 0.038], self.grip_range, i))
 
             y = -(self.l1*math.cos(67.0) - self.l2*math.cos(54.0))
             z = -(self.l1*math.sin(67.0) + self.l2*math.sin(54.0))
