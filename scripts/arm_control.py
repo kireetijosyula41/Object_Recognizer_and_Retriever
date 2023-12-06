@@ -73,7 +73,7 @@ class ActionHandler:
     def get_hand_pos(self, hand):
         self.target_x = hand.point.x
         self.target_y = hand.point.y
-        self.target_z = -(hand.point.z - 64.0)
+        self.target_z = -(hand.point.z - 59.0)
 
         self.tilt_angle = hand.tilt_angle
         print("Received tilt angle: {0}".format(hand.tilt_angle))
