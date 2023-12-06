@@ -15,6 +15,7 @@ from std_msgs.msg import String
 
 from enum import Enum, auto
 from collections import deque
+from itertools import *
 from object_detector import Detecter
 
 import math
@@ -57,7 +58,6 @@ class Actions(object):
         self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
         self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
 
-
         # for openCV
         self.image_sub = rospy.Subscriber('camera/rgb/image_raw', Image, self.image_callback)
         self.bridge = cv_bridge.CvBridge()
@@ -74,19 +74,16 @@ class Actions(object):
 
         self.target_obj = None
         #object pool
-        self.objects = {"rubik cube", "bottle", "pen", "ball"}
+        self.objects = {"cube", "bottle", "pen", "ball"}
         self.tag = 1
 
         self.state_publisher = rospy.Publisher('robot_state', String, queue_size=10)
-
         
         self.min_dist = None
 
         #PID
         self.k_linear = 0.9
         self.k_angular = 0.02
-
-
 
     def rest_arm(self):
         arm_joint_goal = [0.0, 0.30, 0.3, -0.9]
@@ -97,9 +94,9 @@ class Actions(object):
 
         self.move_group_arm.stop()
 
-
     #set up image openCV
     def image_callback(self, data):
+        self.detecter = Detecter()
         ####################################################
         # here goes the object-recognition
         self.img = self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8')
@@ -107,40 +104,29 @@ class Actions(object):
         ####################################################
         # here goes the object-recognition
         out_boxes, out_class = self.detecter.detect_image(self.img)
-        print("out class", out_class)
+        # print("out class", out_class)
 
         self.frame_with_boxes = self.draw_boxes(self.img, out_boxes)
         self.latest_image = self.frame_with_boxes
         self.new_image_flag = True
 
-
-
-
     def main_drive(self):
-
         self.listenCommands()
-
         #using the code from line follower for to_object
         if self.move == next_Move.move_to_obj:
             self.to_object() 
-
         # when switched to pick_up
         if self.move == next_Move.hand_pickup:
             # first pick up
             self.pick_up()
-            
-
         # when it's time for looking for AR tags
         if self.move == next_Move.move_to_tag:
             gray_img = cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
             self.to_tag(gray_img)
-
-
         # when ready to drop off
         if self.move == next_Move.drop_off:
             self.drop_off()
             rospy.sleep(3)
-            
             #then rest arm and turn around
             self.rest_arm()
             self.turn_around()
@@ -152,7 +138,6 @@ class Actions(object):
             cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
         return image
 
-
     def listenCommands(self):
         command = input("Enter command: ").lower()
 
@@ -161,39 +146,36 @@ class Actions(object):
                 if self.move == next_Move.idel:
                     self.target_obj = obj
                     self.move = next_Move.move_to_obj
+                    return
                 else:
                     print("Current state does not allow for user input.")
-            else:
-                print("No valid object found in the command, please type again")
-
-
+                    return
+            
+        print("No valid object found in the command, please type again")
 
     # contains find object and move to object
     def to_object(self):
+        print("start moving")
+        # mask = self.get_color_mask(self.object, hsv)
+        # h,w,d = self.img.shape
+        # M = cv2.moments(mask)
+
+        # # if the target object is in the view, go
+        # if M['m00'] > 0:
+        #     cx = int(M['m10']/M['m00'])
+        #     cy = int(M['m01']/M['m00'])
         
-        #TODO: what to get from camera
+        #     min_dist = self.min_dist if self.min_dist is not None else 0.3
 
-        mask = self.get_color_mask(self.object, hsv)
-        h,w,d = self.img.shape
-        M = cv2.moments(mask)
-
-        # if the target object is in the view, go
-        if M['m00'] > 0:
-            cx = int(M['m10']/M['m00'])
-            cy = int(M['m01']/M['m00'])
-        
-            min_dist = self.min_dist if self.min_dist is not None else 0.3
-
-            self.cmd.linear.x = self.k_linear * min_dist
-            error = cx - w//2
-            self.cmd.angular.z = -self.k_angular * error
-            self.cmd_pub.publish(self.cmd)
+        #     self.cmd.linear.x = self.k_linear * min_dist
+        #     error = cx - w//2
+        #     self.cmd.angular.z = -self.k_angular * error
+        #     self.cmd_pub.publish(self.cmd)
 
         # if the target object is out of the view, turn to find
-        else: 
-            print("####  finding... ####")
-            self.trun_to_find()
-
+        # else: 
+        #     print("####  finding... ####")
+        #     self.trun_to_find()
 
     def pick_up(self):
         self.state_publisher.publish("Start")
@@ -246,9 +228,9 @@ class Actions(object):
                 self.cmd_pub.publish(self.cmd)
             
             else:
-                self.trun_to_find()
+                self.turn_to_find()
         else:
-            self.trun_to_find()
+            self.turn_to_find()
        
         
        
@@ -326,7 +308,7 @@ class Actions(object):
         self.cmd_pub.publish(self.cmd)
         rospy.sleep(2.5)
 
-    def trun_to_find(self):
+    def turn_to_find(self):
         self.cmd.angular.z = 0.3
         self.cmd.linear.x = 0.0
         self.cmd_pub.publish(self.cmd)
@@ -343,19 +325,18 @@ class Actions(object):
 
         # while not rospy.is_shutdown(): pass
         while not rospy.is_shutdown():
-            #if we done 3 rounds, stop
+
             if self.new_image_flag:
                 cv2.imshow("window", self.latest_image)
                 cv2.waitKey(3)
                 self.new_image_flag = False
-           
-            print(self.move)
-
-            #here we check image for finding objects and tags and pickup, drop off
-            self. main_drive()
+            self.main_drive()
             #here we check distanceto determin pick up or drop off
             self.check_distance()
-
+            
+            print(self.move)
+            #here we check image for finding objects and tags and pickup, drop off
+           
             rate.sleep()   
 
 if __name__ == '__main__':
