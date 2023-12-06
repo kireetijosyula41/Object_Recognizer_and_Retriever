@@ -153,13 +153,6 @@ class ActionHandler:
         ## Q2. Mirror q1
         elif y_true < 0.0 and z_true > 0.0:
             # print("Q2")
-            # print("q1b: {0}, q2b:{1}, q3:{2}".format(np.degrees(q1b), np.degrees(q2b), self.q3* (180 / math.pi)))
-            # print("q1a: {0}, q2a:{1}, q3:{2}".format(np.degrees(q1a), np.degrees(q2a), self.q3* (180 / math.pi)))
-
-            # q1a = (-q1a) - (math.pi / 2)
-            # q2a = (-(math.pi / 2) + q2a)
-            # q1b = (math.pi / 2) - q1b
-            # q2b = (-(math.pi / 2) + q2b)
             q1a = -((math.pi / 2) - q1a)
             q2a = (-((math.pi / 2) - q2a))
             q1b = -((math.pi / 2) - q1b)
@@ -181,6 +174,7 @@ class ActionHandler:
 
         return value
 
+    ## Maps a value in interval1 to a value in interval2
     def quantize(self, interval1, interval2, value):
         a = interval1[0]
         b = interval1[1]
@@ -268,30 +262,6 @@ class ActionHandler:
             self.move_group_arm.go((self.q0, self.q1, self.q2, -100 * (math.pi/180)), wait=False)
             # self.move_group_arm.stop()
             rospy.sleep(5)
-
-            # ## Test coordinate adjustment
-            # p = [18, 20, 0]
-            # p_a = self.adjust_coordinates(p[0], p[1], p[2])
-            # print('Point:{0}\nValue:{1}\n'.format(p, p_a))
-
-            # self.two_RIK(0, 10, 25)
-            # # print("q1:{0}, q2:{1}\n".format(self.q1, self.q2))
-            # self.move_group_arm.go((self.q0, self.q1, self.q2, -100 * (math.pi/180)), wait=False)
-            # # self.move_group_arm.stop()
-            # rospy.sleep(0.25)
-
-            # ## Move right
-            # y_values = list(np.linspace(0, 16.9, 100))
-            
-            # for i in reversed(range(len(y_values))):
-            #     z = y_values[i]
-            #     y = y_values[i]
-
-            #     self.two_RIK(0, y, z)
-            #     # print("q1:{0}, q2:{1}\n".format(self.q1, self.q2))
-            #     self.move_group_arm.go((self.q0, self.q1, self.q2, -100 * (math.pi/180)), wait=False)
-            #     # self.move_group_arm.stop()
-            #     rospy.sleep(0.8)
 
             ## Move in an arc along the maximum distance
             z_values = list(np.linspace(self.z_min, self.max_dist, 100))
