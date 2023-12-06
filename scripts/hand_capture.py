@@ -58,8 +58,13 @@ class HandCapture:
 
         # Calculate dot product
         dot_product = d[0]*d_xy[0] + d[1]*d_xy[1]
-        # Calculate the angle in radians
-        angle_rad = math.acos(dot_product / (mag_d * mag_d_xy))
+
+        ## Avoid domain errors
+        if dot_product > mag_d * mag_d_xy:
+            angle_rad = np.radians(103)
+        else:
+            # Calculate the angle in radians
+            angle_rad = math.acos(dot_product / (mag_d * mag_d_xy))
 
         if d[2] < 0:
             angle_rad = -angle_rad
