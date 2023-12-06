@@ -15,6 +15,7 @@ from std_msgs.msg import String
 
 from enum import Enum, auto
 from collections import deque
+from object_detector import Detecter
 
 import math
 import sys
@@ -60,6 +61,8 @@ class Actions(object):
         # for openCV
         self.image_sub = rospy.Subscriber('camera/rgb/image_raw', Image, self.image_callback)
         self.bridge = cv_bridge.CvBridge()
+        self.latest_image = None
+        self.new_image_flag = False
         # QR-code
         self.aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 
@@ -71,7 +74,7 @@ class Actions(object):
 
         self.target_obj = None
         #object pool
-        self.objects = {"rubik cube", "bottle", "pen"}
+        self.objects = {"rubik cube", "bottle", "pen", "ball"}
         self.tag = 1
 
         self.state_publisher = rospy.Publisher('robot_state', String, queue_size=10)
@@ -97,9 +100,19 @@ class Actions(object):
 
     #set up image openCV
     def image_callback(self, data):
-        self.img = self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8')
         ####################################################
         # here goes the object-recognition
+        self.img = self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8')
+        self.img = cv2.resize(self.img, (638, 480))
+        ####################################################
+        # here goes the object-recognition
+        out_boxes, out_class = self.detecter.detect_image(self.img)
+        print("out class", out_class)
+
+        self.frame_with_boxes = self.draw_boxes(self.img, out_boxes)
+        self.latest_image = self.frame_with_boxes
+        self.new_image_flag = True
+
 
 
 
@@ -132,6 +145,12 @@ class Actions(object):
             self.rest_arm()
             self.turn_around()
             self.move = next_Move.idel
+
+    def draw_boxes(self, image, boxes):
+        for box in boxes:
+            x1, y1, x2, y2 = map(int, box)
+            cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        return image
 
 
     def listenCommands(self):
@@ -319,24 +338,21 @@ class Actions(object):
 
         # while not rospy.is_shutdown():
         #     pass
-        self.init_arm()
-        self.move = next_Move.move_to_obj
-        self.choose_next_action()
-
+        self.rest_arm()
         rospy.sleep(3)
 
         # while not rospy.is_shutdown(): pass
         while not rospy.is_shutdown():
             #if we done 3 rounds, stop
-            if self.round_count >= 4:
-                self.stop_moving()
-                break
-            # if self.move == next_Move.move_to_obj:
-            #     self.to_object()
+            if self.new_image_flag:
+                cv2.imshow("window", self.latest_image)
+                cv2.waitKey(3)
+                self.new_image_flag = False
+           
             print(self.move)
-            print(self.object, self.tag)
+
             #here we check image for finding objects and tags and pickup, drop off
-            self.process_img()
+            self. main_drive()
             #here we check distanceto determin pick up or drop off
             self.check_distance()
 
