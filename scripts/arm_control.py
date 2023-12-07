@@ -36,7 +36,7 @@ class ActionHandler:
         )
 
         ## Retrieves state from robot driver
-        self.joint_angle_sub = rospy.Subscriber(
+        self.state_sub = rospy.Subscriber(
             "robot_state", String, self.act_on_state
         )
 
@@ -56,7 +56,7 @@ class ActionHandler:
         self.z_min = 10.05
 
         ## Boolean for whether to take IK actions
-        self.arm_mode = False
+        self.arm_mode = True
 
         ## Storing values for target angles
         self.q0 = 0
@@ -100,10 +100,13 @@ class ActionHandler:
         # print("Received tilt angle: {0}".format(hand.tilt_angle))
 
     def act_on_state(self, strn):
-        if strn == "Start":
+       
+        if True:#str(strn.data) == str("Start"):
             self.arm_mode = True
+            print("ARM MODE IS TRUE")
         else:
             self.arm_mode = False
+            print("ARM MODE IS FALSE")
 
 
     ## Perform a 2RIK calculation.
