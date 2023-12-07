@@ -1,0 +1,6 @@
+path: ../dataset
+train: images_multiple
+val: images_multiple_val
+
+nc: 4
+names: ['ball': 0, 'cube': 1, 'bottle': 2, 'pen': 3]
