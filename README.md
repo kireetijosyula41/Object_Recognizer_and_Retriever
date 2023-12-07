@@ -29,12 +29,16 @@ After consulting with Sarah and talking with Teddy on how to improve the perform
 The implementation of inverse kinematics is handled by the `arm_control.py` node. The node will receive hand data from the `hand_control_topic` topic and attempt to move the end-effector of the arm to this position. Since the robot arm will almost exclusively be reaching forward, the position of the arm is locked to the front half of the robot (y > 0). Additionally, it is okay to use only the arm-down solutions, as the primary goal is to reach for objects on the ground in front of the robot.
 
 This was achieved by separating the arm into 4 sections.
+
 Joint 1:
 * The first joint rotates the entire arm about the `z` (up) axis, and is calculated using basic trigonometry based on `x` and `y`
+
 Joints 2 and 3:
 * The second and third joints are treated as a 2DOF arm, with the target position being some point in the y-z plane. This significantly reduced the complexity of the inverse kinematics problem, and is solved through the `two_RIK()` function
+
 Joint 4:
 * The final joint is mapped to the tilt_angle received from the hand camera. It should intuitively mimic the angle of the user’s wrist. This value does not need to be adjusted.
+
 Gripper:
 * The gripper is set to be opened or closed as a function of the distance between the user’s thumb and pointer finger. When the user pinches their fingers together, the gripper will close. When the user separates their fingers, the gripper will open. The gripper value is scaled and set in `get_hand_pos()`
 
@@ -48,10 +52,12 @@ After adjusting the points, the 2D Kinematics Algorithm runs and produces a set 
 # ROS Node Diagram
 
 The following is the ROS node diagram for the complete framework of our code: 
-![](https://github.com/kireetijosyula41/Object_Recognizer_and_Retriever/blob/main/node_diagram.jpg)
+![](https://github.com/kireetijosyula41/Object_Recognizer_and_Retriever/blob/main/OOARArchitectureDiagram.jpg)
 
 `robot_driver.py`: takes input from the user in the form of a string command. It then published that information to the `robot_state` topic. It also calls the relevant object detection functions from `obj_dect`.
+
 `hand_capture.py`: publishes all necessary hand-tracking data to the `hand_control_topic` topic. 
+
 `arm_control.py`: Subscribes to the `robot_state` and `hand_control_topic` topics. Based on the state value received, the IK algorithm will be activated or deactivated.
 
 # Execution
