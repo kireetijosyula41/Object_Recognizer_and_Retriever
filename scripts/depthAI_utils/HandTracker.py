@@ -361,7 +361,7 @@ class HandTracker:
             in_video = self.q_video.get()
             video_frame = in_video.getCvFrame()
             #in our case, we need to flip the camera
-            video_frame = cv2.flip(video_frame, -1)
+            
             if self.pad_h:
                 square_frame = cv2.copyMakeBorder(video_frame, self.pad_h, self.pad_h, self.pad_w, self.pad_w, cv2.BORDER_CONSTANT)
             else:

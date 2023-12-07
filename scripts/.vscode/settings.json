@@ -1,0 +1,14 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/ukiriz/catkin_ws/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages",
+        "/home/ukiriz/.pyenv/versions/3.10.13/lib/python3.10/site-packages/models",
+        "/home/ukiriz/.pyenv/versions/3.10.13/lib/python3.10/site-packages/models/slim"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/ukiriz/catkin_ws/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages",
+        "/home/ukiriz/.pyenv/versions/3.10.13/lib/python3.10/site-packages/models",
+        "/home/ukiriz/.pyenv/versions/3.10.13/lib/python3.10/site-packages/models/slim"
+    ]
+}

@@ -1,54 +1,101 @@
-Team Name: Object Recognizer and Retriever
-Team List: Jesse Gao, Kireeti Josyula, Tony Zhou, Jake Bilbro
-Link to Github Repository: https://github.com/kireetijosyula41/Object_Recognizer_and_Retriever.git 
-Or 
-git@github.com:kireetijosyula41/Object_Recognizer_and_Retriever.git 
+# Object Recognizer and Retriever
+Team Members: Jake Bilbro, Jesse Gao, Tony Zhou, Kireeti Josyula
 
-Motivation (2-3 sentences): Why is your team interested in pursuing this project?  
+# Project Overview and Description: 
 
-We think that there are daily tasks and applications that can be achieved by a robot, such as following a set of instructions to get and retrieve a certain set of items. In this final project, we hope to design a program that will have the turtlebot move based on voice commands and navigate towards certain objects with tags, and use hand motions to retrieve the items in questions while returning to the user. Thus, the motivation for this project is for having a robot carry out certain tasks in response to voice and hand motion commands for people that would otherwise struggle with such capabilities. 
+In daily life, there are daily tasks and applications that can be achieved by a robot, such as following a set of instructions to get and retrieve a certain set of items. Thus, in this final project, our group was interested to getting a turtlebot to move and navigate towards an intended object based on a user-input command, and having the user use their own hand to retrieve the items in question and return it to a user. As a extension of many parts of the Q-learning project, we hoped to achieve a robot program that could help people who are unable to move (e.g confined to bed, wheeelchairs, etc.), command a robot to identify, get and retrieve user-specified items. The two main components, thus, in this project, involved implementation of a custom Inverse Kinematics solver, as well as object classification and detection for a specified set of items that a turtlebot arm can manage. 
 
-Scenario: 
-1 : (voice/type) “go for the tomato”(voice– string parsing – LLM + image frame)
-2: move to tomato and stop in front of it. It should has a state change machinism. 
-3: In the “free hand state”, we do hand control. Sync hand(hand->arm) to grab.(once grabbing), here, the hand point(center) will be the control point, which will drive the arm to move(This can be done by one person to do in simulation). 
-4: voice : return to the initial position(SLAM/AR(easiler))
+As shown in the two images below, our team has managed to implement a object detection algorithm that is able to recognize some of our preselected items (preselected items = ball, bottle, pen, cube), as shown in the screenshot of the turtlebot camera below. The second image shows the results of training our object detection algorithm on a subset of synthetic image data containing images of our four objects when placed against a background. The performance was high for the bottle and the ball and was moderate for the pen and the cube, as shown in the imges below: 
+![](https://github.com/kireetijosyula41/Object_Recognizer_and_Retriever/blob/main/val_batch0_labels.jpg)
+![](https://github.com/kireetijosyula41/Object_Recognizer_and_Retriever/blob/main/val_batch0_pred.jpg)
 
+Additionally, we managed to fine tune a custom inverse kinematics solver in order to get the robot arm to move to the motions of the hand through use of a depth camera. This functionality of this is displayed in the first GIF below:
 
-Main Components (1 paragraph): What are the main topics covered in your project? What robotics algorithm(s) will you be exploring in your project? Are there any other main components to your project?  
- 
-The most important part of this project will be the hand tracking in order to control the arm of the robot. In order to do this, we will need to implement hand tracking based on a depth camera, and use Inverse Kinematics in order to link hand movements to the movements of the robot arm. The next part of this project will be utilizing the robot’s locomotion capability so it can find the optimal path towards certain items. Our idea is to have the items labeled with AR tags and put in different locations in a closed room. This way, we will give the robot a command (either an auditory command or a typed-in command), and the robot will identify the location of the goal objects using a computer vision algorithm. Furthermore, the robot should be able to know its positions without us giving it such information. This way, if we can get it to learn its own location in space, we can have it navigate to and from objects and a set origin point. These steps may be implemented by using a particle filter localization algorithm while the robot moves autonomously, so that it can capture its position in space, navigate towards other objects, and carry out the previously-mentioned commands on picking up and returning objects to a set origin point. These should be the main components of the project. 
+![](https://github.com/kireetijosyula41/Object_Recognizer_and_Retriever/blob/main/HandTracking.gif)
 
-Final Product (1 bullet point per deliverable level, 2-3 sentences per bullet point): For each of the following, what would success look like:
+Integrating all components was accomplished by the following procedure: First, the robot identifies the object specified by the user and moves to it. Then, the control of the arm is ceded to the user. Once the user has picked up the object (gripper closed for >10s) the robot returns to its original positions, finds the correct AR tag, and places the object in front of it. The entire process can be seen in the GIF below:
+![](https://github.com/kireetijosyula41/Object_Recognizer_and_Retriever/blob/main/ORARMain.gif)
 
+# System Architecture
 
-MVP: For a minimally viable product, we hope to get the robot arm synced to the hand movements. The hope is that we can get the robot to move the arm according to different hand motions and positions. In addition, the minimally viable product should have the robot recognize and move to a certain location based on recognizing the AR tag and listening to the auditory command or other input command (typed) given. 
+There are four main files involved in this project. The names of these files, which are located in the scripts directory, are arm_control.py, hand_capture.py, obj_dect.py and robot_driver.py. As mentioned above, the two main components for the lab were the gesture imitation and Inverse Kinematics linkage, as well as the Computer Vision algorithm for object detection. 
 
-Solid End Result: A solid end result/goal is to have the robot be able to pick up an object based on our hand movements and then navigate back to a starting origin point based on the auditory or typed-in commands, while carrying that object. Thus, from start to finish, a solid end result should be a robot taking in a command, finding an appropriate AR tag location, navigating towards that location, picking up the object, and returning it to the user’s pre-set origin point
+## Computer Vision
+In tackling the computer vision part of the project, we wanted to implement an object classifier and detector for the four objects (bottle, pen, cube, ball), that we selected before. Initially, we created a synthetic image dataset, where isolated pictures of each of the objects were placed on top of a background image collected by the turtlebot camera. With this, we tried to use a pretrained IMAGE analysis and recgonition model called resnet_50, along with algorithmic from the following website which enabled road sign detection: 
 
+After consulting with Sarah and talking with Teddy on how to improve the performance, we began to use YOLOv5, which was specifically intended for fast and quick object detection with accurate bounding boxes. Teddy provided us with a skeleton of a previous code iteration that worked with the Realsense camera.  In regards to the code, the file corresponding is obj_dect.py. In this file, a class ObjectDetection is called, which loads the YOLOv5 pretrained model, and returns the bounding boxes for all of the detected objects in the frame, along with the names of the objects. Within the umbrella function robot_driver.py, the code gathers this information from the obj_dect.py file in the image_callback() function, which uses the frame and the name of the object in tandem with a typed-in command ("Bottle", "Ball", "Cube", "Pen"). Through the view of a debugging window, it shows the object that was requested within a bounding box, which it then navigates towards through the cmd_vel topic with proportional control. 
 
-An end result that you would consider to be a "stretch" (e.g., "it would be above and beyond if we could..."): A ‘stretch’ ending would be to get the robot to deal with multiple different objects at a certain location (for example, if we needed a carrot and the AR tag location for carrot had both a carrot and tomato at the location, can it differentiate between the two objects and pick up the right one. This could be implemented with different colors, whereby the robot will pick up the right object based on a color for the object mentioned. 
+## Inverse Kinematics
+The implementation of inverse kinematics is handled by the `arm_control.py` node. The node will receive hand data from the `hand_control_topic` topic and attempt to move the end-effector of the arm to this position. Since the robot arm will almost exclusively be reaching forward, the position of the arm is locked to the front half of the robot (y > 0). Additionally, it is okay to use only the arm-down solutions, as the primary goal is to reach for objects on the ground in front of the robot.
 
+This was achieved by separating the arm into 4 sections.
 
-Timeline: Provide a rough draft timeline for the major milestones of your project
+Joint 1:
+* The first joint rotates the entire arm about the `z` (up) axis, and is calculated using basic trigonometry based on `x` and `y`
 
-Since we have 4 people, we will do vision(scene understanding, integrating GPT4, img frame/obj tracking) and hand tracking(integrating mediapipe and depth camera and IK) at the same time. This should take 1-1.5 week. After this we will merge and work on locomotion together. The two groups can work together at different times depending on our availability. The first group will work on the robot vision part to make the robot identify the correct locations of the goal objects. The second group will work on the hand tracking part so that the robot knows how to manipulate the objects.
+Joints 2 and 3:
+* The second and third joints are treated as a 2DOF arm, with the target position being some point in the y-z plane. This significantly reduced the complexity of the inverse kinematics problem, and is solved through the `two_RIK()` function
 
-Nov 10: Create a rough program framework like messages and launch files
-Nov 13-14: The first group works on designing a basic moving program to allow tag identification. The second group works on basic stuff of hand gesture detection.
-Nov 15-17: The first group tries to implement the object identification. The second group works on robot arm/gripper movements.
-Nov 27-28: Build an experiment setting in reality and merge the results from the two groups together.
-Nov 30-Dec 1: If it goes well, try to implement voice recognition and GPT-based instructions interpretation.
-Dec 6 and 7: Having a working demo of the solid end result or ‘stretch’ depending on where we are, and all of the deliverables finished. 
+Joint 4:
+* The final joint is mapped to the tilt_angle received from the hand camera. It should intuitively mimic the angle of the user’s wrist. This value does not need to be adjusted.
 
-Resources: Describe what materials you plan to use (e.g., additional sensors, objects for the robot to pick up, a maze environment) as well as details about the turtlebot(s) that you plan to use (how many turtlebots, whether or not you want the OpenManipulator arm(s) attached). 
+Gripper:
+* The gripper is set to be opened or closed as a function of the distance between the user’s thumb and pointer finger. When the user pinches their fingers together, the gripper will close. When the user separates their fingers, the gripper will open. The gripper value is scaled and set in `get_hand_pos()`
 
-For this project, we will need an in-depth camera in order to track hand movements and get the synced with the robot’s hand. We will be using the turtlebot’s camera and locomotion capability in order to get the robot to move towards certain locations. Finally, we will need objects and associated AR tags that the robot can recognize and pick up and retrieve to the set origin point. 
-
-
-Risks (2-3 sentences): What do you see as the largest risks to your success in this project?
-
-Some of the risks associated with this project that may hinder success will be integrating the voice commands or input commands into physical turtlebot movements. This is a major component of the project, so making sure the robot can respond appropriately to commands and respond appropriately will be key. The other risk for this project will be the in-depth camera for the hand motions, and figuring out how to correlate this to motions of the robot arm. 
+Algorithm:
+The algorithm is only active when a value of “Start” is received from the `robot_state`. Otherwise, target joint angles are not published
+Once the hand data is received, the `y` and `z` coordinates must be converted from camera-space to world-space. If the point `(y, z)` exceeds the maximum distance the arm can reach, the coordinates will become `(y’, z’)` the nearest point on the circle.
+![](https://github.com/kireetijosyula41/Object_Recognizer_and_Retriever/blob/main/circle_diagram.jpg)
+After adjusting the points, the 2D Kinematics Algorithm runs and produces a set of joint angles. However, these angles are not from the same reference points, and several adjustments must be made for each angle before the command is issued.
 
 
+# ROS Node Diagram
+
+The following is the ROS node diagram for the complete framework of our code: 
+![](https://github.com/kireetijosyula41/Object_Recognizer_and_Retriever/blob/main/OOARArchitectureDiagram.jpg)
+
+`robot_driver.py`: takes input from the user in the form of a string command. It then published that information to the `robot_state` topic. It also calls the relevant object detection functions from `obj_dect`.
+
+`hand_capture.py`: publishes all necessary hand-tracking data to the `hand_control_topic` topic. 
+
+`arm_control.py`: Subscribes to the `robot_state` and `hand_control_topic` topics. Based on the state value received, the IK algorithm will be activated or deactivated.
+
+# Execution
+
+The following instructions detail exactly how to insert the commands for complete execution of the task described above: 
+
+1. Open a terminal window and run `roscore`
+2. Bringup the turtlebot
+In a new terminal window, ssh into the turtlebot and run `bringup`
+In a new terminal window, ssh into the turtlebot and run `bringup_cam`
+3. Prepare the arm to receive commands
+In a new terminal window, run `roslaunch turtlebot3_manipulation_bringup turtlebot3_manipulation_bringup.launch`
+In a new terminal window, run `roslaunch turtlebot3_manipulation_moveit_config move_group.launch`
+4. Republish the image data
+In a new terminal window, run `rosrun image_transport republish compressed in:=raspicam_node/image raw out:=camera/rgb/image_raw`
+5. Run the required nodes
+In a new terminal window, run `rosrun Object_Organizer_and_Retriever hand_capture.py`
+In a new terminal window, run `rosrun Object_Organizer_and_Retriever arm_control.py`
+6. Finally, in a new terminal window, run `rosrun Object_Organizer_and_Retriever robot_driver.py`
+Input commands “Bottle”, “Ball”, “Cube”, or “Pen” will command the robot to seek the respective object. The control of the arm will then be ceded to the user based on the depth camera. Once the object has been raised overhead (out of camera view), the robot will move to the AR tag.
+
+Running these commands will enable the complete execution of the object recognition and retrieval program. 
+
+# Challenges
+## Inverse Kinematics
+The inverse kinematics component was more challenging than expected. The first issue we ran into was the discrepancy between the angles calculated and the angles used by moveit. 
+The angles for joint1 produced by the algorithm are relative to the `y` (front) axis, but the required angle is relative to the `z` (up) axis. The angles for joint2 produced by the algorithm are relative to the axis produced along the first link, but the required angle is relative to 90 degrees of this axis. Once these conversions were made, the algorithm now produces the expected joint angle targets
+
+There were many issues in practice with the real turtlebot. The time it takes for moveit to plan and execute the trajectory results in latencies between 100ms and 1000ms. This makes it slightly more difficult for the user to precisely control the arm. There were also bizarre behaviors during the procedure. At seemingly random times, even though the hand position data smoothly moves between points, the arm will stop moving and then suddenly jerk to the desired position at an incredible rate of speed. To mitigate this, we placed speed and acceleration limits on all the joints. We also limited the domain to the front half of the robot to try to limit the distance between desired points. For the most part, this behavior no longer happens. The reason as to why this issue exists is still not fully understood, but adjusting the rate and the speed limits seems to have helped.
+
+## Hand Tracking
+The depth-camera presented multiple challenges to our project. It was difficult to work on this aspect because the camera requires drivers to run that had to be installed on the linux machine by techstaff. The drivers were only installed on Jesse’s account on the “Arcanine” machine, meaning Jesse had to be present and we had to work on that specific computer. 
+At first, the camera data was noisy and inaccurate, and struggled to detect the hand properly. Z-values were consistently jumping around and only worked in a small area. This caused excessive jitteriness and snapping movements of the arm, making the inverse kinematics aspect of the project more difficult to implement. Once the cause of the issue was diagnosed and fixed, most of these problems disappeared.
+
+# Future Work
+The inverse kinematics algorithm could potentially be refined. If we had more time, we would look into ways to reduce the latency on the robot movements, as inexperienced users may have a difficult time adjusting to this. Additionally, the remaining jerky movement behaviors could potentially undergo smoothing. For example, if the target position is more than 7.0cm away, split the movements into increments and perform each one consecutively.
+
+# Takeaways
+It is extremely important to test components of projects individually. A lot of time was spent debugging the inverse kinematics algorithm to no avail since the actual problem was the camera data being sent. If we had been more diligent in testing both the inverse kinematics and the hand tracking separately, we would have been much more efficient
+Once each component was refined separately, the integration was fast and simple.
 
