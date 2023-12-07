@@ -100,3 +100,5 @@ The inverse kinematics algorithm could potentially be refined. If we had more ti
 It is extremely important to test components of projects individually. A lot of time was spent debugging the inverse kinematics algorithm to no avail since the actual problem was the camera data being sent. If we had been more diligent in testing both the inverse kinematics and the hand tracking separately, we would have been much more efficient
 Once each component was refined separately, the integration was fast and simple.
 
+Object detection is a difficult process, but choosing the right model is important as well. At first we were using RestNet, which is primarily an image classifier. This presented issues with speed and accuracy. For the final version, we switched to YOLOv5, which is more commonly used for object detection. This improved the speed and allowed for us to successfully identify the objects. 
+
