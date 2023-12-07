@@ -39,7 +39,10 @@ class HandCapture:
     def calculate_pinch_distance(self, points):
         thumb_tip = points[4]
         index_tip = points[8]
+        # print("POINTS[4]:{0}".format(points[4]))
+        # print("POINTS[8]:{0}".format(points[8]))
         distance = np.sqrt((thumb_tip[0] - index_tip[0]) ** 2 + (thumb_tip[1] - index_tip[1]) ** 2 + (thumb_tip[2] - index_tip[2]) ** 2)
+        print("DIST:{0}".format(distance))
         return distance
 
     def calculate_tilt(self, points):
@@ -93,15 +96,22 @@ class HandCapture:
         HAND_MISSING_THRESHOLD = 30  # Number of frames to wait before resetting
 
         try:
+           
+           
             while not rospy.is_shutdown():
                 # Check for the presence of the left hand
                 frame, hands, bag = self.tracker.next_frame()
+                if frame is None: break
+
+                 # Draw hands
+                frame = self.renderer.draw(frame, hands, bag)
 
                 if hands:
                     hand_missing_counter = 0  # Reset counter as hand is present
 
                     camera_height = 80 #80cm above the table ground
                     wrist_xyz0 = hands[0].xyz / 10.0 # in cm
+                    wrist_xyz0[1] += 10
                     #print(wrist_xyz0[2])
                     wrist_xyz0[2] =camera_height -wrist_xyz0[2] # this is the height from floor
                     if  wrist_xyz0[2] < 0:  wrist_xyz0[2] = 0
@@ -110,12 +120,10 @@ class HandCapture:
                         initial_hand_position = wrist_xyz0
 
                      # Calculate relative X and Y, keep Z absolute based on the first time hand been detected
-                    relative_position = wrist_xyz0 - initial_hand_position
-                    relative_position[2] = wrist_xyz0[2]
+                    relative_position = wrist_xyz0 - [0.0, 0.0, 0.0]
 
                     points = hands[0].get_rotated_world_landmarks()
                     points = points + relative_position
-
                     if self.initial_distance is None:
                         self.initial_distance = self.calculate_pinch_distance(points)
 
@@ -143,10 +151,7 @@ class HandCapture:
                         self.initial_distance = None
 
 
-                if frame is None: break
-
-                # Draw hands
-                frame = self.renderer.draw(frame, hands, bag)
+                
                 key = self.renderer.waitKey(delay=1)
                 if key == 27 or key == ord('q'):
                     break
