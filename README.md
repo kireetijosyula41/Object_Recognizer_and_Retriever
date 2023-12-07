@@ -1,18 +1,25 @@
-Team Name: Object Recognizer and Retriever
-Team List: Jesse Gao, Kireeti Josyula, Tony Zhou, Jake Bilbro
-Link to Github Repository: https://github.com/kireetijosyula41/Object_Recognizer_and_Retriever.git 
-Or 
-git@github.com:kireetijosyula41/Object_Recognizer_and_Retriever.git 
+# Object Recognizer and Retriever
+Team Members: Jake Bilbro, Jesse Gao, Tony Zhou, Kireeti Josyula
 
-Motivation (2-3 sentences): Why is your team interested in pursuing this project?  
+# Project Overview and Description: 
 
-We think that there are daily tasks and applications that can be achieved by a robot, such as following a set of instructions to get and retrieve a certain set of items. In this final project, we hope to design a program that will have the turtlebot move based on voice commands and navigate towards certain objects with tags, and use hand motions to retrieve the items in questions while returning to the user. Thus, the motivation for this project is for having a robot carry out certain tasks in response to voice and hand motion commands for people that would otherwise struggle with such capabilities. 
+In daily life, there are daily tasks and applications that can be achieved by a robot, such as following a set of instructions to get and retrieve a certain set of items. Thus, in this final project, our group was interested to getting a turtlebot to move and navigate towards an intended object based on a user-input command, and having the user use their own hand to retrieve the items in question and return it to a user. As a extension of many parts of the Q-learning project, we hoped to achieve a robot program that could help people who are unable to move (e.g confined to bed, wheeelchairs, etc.), command a robot to identify, get and retrieve user-specified items. The two main components, thus, in this project, involved implementation of a custom Inverse Kinematics solver, as well as object classification and detection for a specified set of items that a turtlebot arm can manage. 
 
-Scenario: 
-1 : (voice/type) “go for the tomato”(voice– string parsing – LLM + image frame)
-2: move to tomato and stop in front of it. It should has a state change machinism. 
-3: In the “free hand state”, we do hand control. Sync hand(hand->arm) to grab.(once grabbing), here, the hand point(center) will be the control point, which will drive the arm to move(This can be done by one person to do in simulation). 
-4: voice : return to the initial position(SLAM/AR(easiler))
+As shown in the two images below, our team has managed to implement a object detection algorithm that is able to recognize some of our preselected items (preselected items = ball, bottle, pen, cube), as shown in the screenshot of the turtlebot camera below. The second image shows the results of training our object detection algorithm on a subset of synthetic image data containing images of our four objects when placed against a background. The performance was high for the bottle and the ball and was moderate for the pen and the cube. 
+
+Additionally, we managed to fine tune a custom inverse kinematics solver in order to get the robot arm to move to the motions of the hand through use of a depth camera. This functionality of this is displayed in the first GIF below:
+
+Finally, in integrating both of these parts together, we have the GIF of the robot moving towards the intended target object (in the case below, the bottle), picking up the bottle through control with the hand, and finally returning to a pre-set location through use of an AR tag, displaying the full functionality of the project at hand. 
+
+
+# System Architecture
+
+There are four main files involved in this project. The names of these files, which are located in the scripts directory, are arm_control.py, hand_capture.py, object_detector.py
+
+
+
+
+
 
 
 Main Components (1 paragraph): What are the main topics covered in your project? What robotics algorithm(s) will you be exploring in your project? Are there any other main components to your project?  
