@@ -105,6 +105,7 @@ class Actions(object):
     def image_callback(self, data):
         model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
         ####################################################
+        # :)s
         # here goes the object-recognition
         try:
             # Convert ROS Image message to OpenCV image
