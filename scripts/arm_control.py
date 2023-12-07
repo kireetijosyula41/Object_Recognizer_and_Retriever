@@ -56,7 +56,7 @@ class ActionHandler:
         self.z_min = 10.05
 
         ## Boolean for whether to take IK actions
-        self.arm_mode = True
+        self.arm_mode = False
 
         ## Storing values for target angles
         self.q0 = 0

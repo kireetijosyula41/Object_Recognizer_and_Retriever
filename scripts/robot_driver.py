@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import sys
 import rospy, moveit_commander
 import os
 import cv2
@@ -61,7 +61,13 @@ class Actions(object):
 
         # for openCV
         self.image_sub = rospy.Subscriber('camera/rgb/image_raw', Image, self.image_callback)
+        self.latest_image = None
+        self.new_image_flag = False
         self.bridge = cv_bridge.CvBridge()
+
+        self.width = None
+        self.target_center_x = None
+        self.target_center_y = None
         
         # QR-code
         self.aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
@@ -94,6 +100,7 @@ class Actions(object):
 
         self.move_group_arm.stop()
 
+    
     #set up image openCV
     def image_callback(self, data):
         model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
@@ -103,6 +110,7 @@ class Actions(object):
             # Convert ROS Image message to OpenCV image
            
             self.frame = self.bridge.imgmsg_to_cv2(data, desired_encoding="bgr8")
+            h,self.width,d = self.frame.shape
 
             # Perform inference
             results = model(self.frame)
@@ -123,12 +131,15 @@ class Actions(object):
                     self.target_center_y = (y1+y2)/2
                     cv2.putText(self.frame, class_name, (x1, y1 -10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
-                else: 
-                    self.target_center_x, self.target_center_y = None
+                    
 
-            # Display the frame with bounding boxes
-            cv2.imshow("YOLOv5 Object Detection", self.frame)
-            cv2.waitKey(1)
+                else: 
+                   self.target_center_x = None
+                   self.target_center_y = None
+
+            self.latest_image = self.frame
+            self.new_image_flag = True
+           
 
         except Exception as e:
             rospy.logerr("Error processing image: %s", e)
@@ -155,11 +166,7 @@ class Actions(object):
             self.turn_around()
             self.move = next_Move.idel
 
-    def draw_boxes(self, image, boxes):
-        for box in boxes:
-            x1, y1, x2, y2 = map(int, box)
-            cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        return image
+   
 
     def listenCommands(self):
         command = input("Enter command: ").lower()
@@ -179,11 +186,12 @@ class Actions(object):
     # contains find object and move to object
     def to_object(self):
         print("start moving")
-        h,w,d = self.frame.shape
+        
         min_dist = self.min_dist if self.min_dist is not None else 0.3
+       
         if self.target_center_x is not None:
             self.cmd.linear.x = self.k_linear * min_dist
-            error = self.target_center_x - w//2
+            error = self.target_center_x - self.width//2
             self.cmd.angular.z = -self.k_angular * error
             self.cmd_pub.publish(self.cmd)
         # if the target object is out of the view, turn to find
@@ -339,8 +347,8 @@ class Actions(object):
         while not rospy.is_shutdown():
 
             if self.new_image_flag:
-                cv2.imshow("window", self.latest_image)
-                cv2.waitKey(3)
+                cv2.imshow("YOLOv5 Object Detection", self.latest_image)
+                cv2.waitKey(1)
                 self.new_image_flag = False
             self.main_drive()
             #here we check distanceto determin pick up or drop off
@@ -354,4 +362,3 @@ class Actions(object):
 if __name__ == '__main__':
     node = Actions()
     node.run()
-        
