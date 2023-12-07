@@ -18,29 +18,23 @@ import os
 class ActionHandler:
     def __init__(self):
         #### Publishers and subscribers
-        ## Subscribes to end_position topic, receives (x, y, z) coordinate of arm goal
-        # self.end_pos_sub = rospy.Subscriber("hand_control_topic", HandPos, self.set_end_pos, queue_size=10)
         ## Interface to control arm movement
         self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
         self.move_group_arm.set_max_velocity_scaling_factor(0.3)
         self.move_group_arm.set_max_acceleration_scaling_factor(0.3)
         ## Interface to control arm gripper
         self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
-        # ## Retrieves current joint angles for inverse kinematics
-        # self.joint_angle_sub = rospy.Subscriber(
-        #     "joint_states", JointState, self.get_joint_angles
-        # )
         ## Retrieves hand data from camera
         self.joint_angle_sub = rospy.Subscriber(
             "hand_control_topic", HandPos, self.get_hand_pos
         )
-
         ## Retrieves state from robot driver
         self.state_sub = rospy.Subscriber(
             "robot_state", String, self.act_on_state
         )
 
         #### Constants and variables
+        ## When true, the program is ready to be run in Gazebo
         self.simulation = False
 
         ## Constants for arm dimensions (https://emanual.robotis.com/docs/en/platform/openmanipulator_x/specification/#dimension)
@@ -56,7 +50,7 @@ class ActionHandler:
         self.z_min = 10.05
 
         ## Boolean for whether to take IK actions
-        self.arm_mode = True
+        self.arm_mode = False
 
         ## Storing values for target angles
         self.q0 = 0
@@ -72,11 +66,6 @@ class ActionHandler:
         self.grip_range = [-0.010, 0.019]
         self.z_range = [0.0, self.max_dist]
 
-        ## Storing values for current angles
-        self.q1_current = 0
-        self.q2_current = 0
-        self.q3_current = 0
-
         ## Storing values for target position
         self.target_x = 0
         self.target_y = 10
@@ -86,27 +75,21 @@ class ActionHandler:
         self.gripper_target = -0.01
 
     def get_hand_pos(self, hand):
-        # print("Received point:{0}".format(hand.point))
         self.target_x = hand.point.x
         self.target_y = hand.point.y
         self.target_z = hand.point.z
         self.true_z = hand.point.z
 
         self.gripper_target = max(-0.01, self.quantize([0.03, 0.09], self.grip_range, hand.gripper_value * 2))
-        print("GRIPGRIP:{0}".format(self.gripper_target))
-
         
         self.tilt_angle = np.radians(hand.tilt_angle)
-        # print("Received tilt angle: {0}".format(hand.tilt_angle))
 
     def act_on_state(self, strn):
        
-        if True:#str(strn.data) == str("Start"):
+        if str(strn.data) == str("Start"):
             self.arm_mode = True
-            print("ARM MODE IS TRUE")
         else:
             self.arm_mode = False
-            print("ARM MODE IS FALSE")
 
 
     ## Perform a 2RIK calculation.
@@ -120,11 +103,13 @@ class ActionHandler:
         y = adjusted[0]
         z = adjusted[1]
         print(adjusted)
-        # dist = math.sqrt(z*z + y*y)
+
         print("Attempting to move to position {0} {1} {2}".format(x, y, z))
 
         y_true = y
         z_true = z
+
+        ## Always calculate as if the arm is in front
         y = abs(y)
         z = abs(z)
 
@@ -133,21 +118,17 @@ class ActionHandler:
             self.q0 = 0.0
         elif x > 0:
             self.q0 = -((math.pi / 2) - math.atan(y / x))
-            # else:
-            #     self.q0 = -((math.pi / 2) + math.atan(y / x))
         else:
             self.q0 = math.pi - ((math.pi / 2) - math.atan(y / x))
-            # else:
-            #     self.q0 = (math.pi / 2) + math.atan(y / x)
-
-        print("from x={0} y={1} z={3}, angle = {2}".format(x, y_true, np.degrees(self.q0), z_true))
 
         numerator = ( -(self.l1**2) + -(self.l2**2) + (y*y) + (z*z) )
         denominator = (2 * self.l1 * self.l2)
 
+        ## If the movement would cause a domain error, do not attempt to move.
         if abs(numerator) >= abs(denominator):
             return
-
+        
+        ## 2DOF IK
         q2a = math.acos(( -(self.l1**2) + -(self.l2**2) + (y*y) + (z*z) ) / (2 * self.l1 * self.l2))
         q2b = math.acos(( (self.l1**2) + (self.l2**2) + -(y*y) + -(z*z) ) / (2 * self.l1 * self.l2))
 
@@ -155,8 +136,7 @@ class ActionHandler:
             term1 = 0
         else:
             term1 = math.atan(z/y)
-        # print(math.atan(z/y))
-        # print(math.atan(( self.l2 * math.sin(q2a) ) / (self.l1 + self.l2 * math.cos(q2a))))
+
         q1a = term1 - math.atan(( self.l2 * math.sin(q2a) ) / (self.l1 + self.l2 * math.cos(q2a)))
         q1b = term1 - math.atan(( self.l2 * math.sin(q2b) ) / (self.l1 + self.l2 * math.cos(q2b)))
 
@@ -164,20 +144,18 @@ class ActionHandler:
         ## Adjust angles based on quadrant
         ## Q1
         if y_true > 0.0 and z_true >= 0.0:
-            # print("Q1")
             q1a = (math.pi / 2) - q1a
-            q2a = -q2a#-((math.pi / 2) - q2a)
+            q2a = -q2a
             q1b = (math.pi / 2) - q1b
             q2b = -((math.pi / 2) - q2b)
+        ## Q1/Q2
         elif y_true == 0:
-            # print("Q1/Q2 (y=0)")
             q1a = q1a
-            q2a = -q2a#-((math.pi / 2) - q2a)
+            q2a = -q2a
             q1b = q1b
             q2b = -((math.pi / 2) - q2b)
         ## Q2. Mirror q1
         elif y_true < 0.0 and z_true > 0.0:
-            # print("Q2")
             q1a = -((math.pi / 2) - q1a)
             q2a = (-((math.pi / 2) - q2a))
             q1b = -((math.pi / 2) - q1b)
@@ -185,13 +163,11 @@ class ActionHandler:
 
         ## Ensure all angles are within tolerances
         self.q1 = self.clamp(self.q1_range, q1a)
-        # print(self.clamp(self.q1_range, q1a))
-        # print(self.q1)
         self.q2 = self.clamp(self.q2_range, q2a)
 
-        # print("q0: {3}, q1b: {0}, q2b:{1}, q3:{2}".format(np.degrees(q1b), np.degrees(q2b), self.q3* (180 / math.pi), self.q0))
         print("q0: {3}, q1a: {0}, q2a:{1}, q3:{2}".format(math.degrees(self.q1), self.q2* (180 / math.pi), self.q3* (180 / math.pi), np.degrees(self.q0)))
 
+    ## Given a range of values r, ensure value is within range. If not, set value to the range.
     def clamp(self, r, value):
         if value < r[0]:
             return r[0]
@@ -209,17 +185,15 @@ class ActionHandler:
 
         return c + ((d - c) / (b - a)) * (value - a)
 
+    ## Calculates the tilt_angle for joint4.
     def set_tilt(self, tilt_angle):
         if tilt_angle < self.q3_range[0]:
             self.tilt_angle = self.q3_range[0]
         if tilt_angle > self.q3_range[1]:
             self.tilt_angle = self.q3_range[1]
-# 
-        # print("Calculated tilt angle (deg): {0}".format(self.tilt_angle))
-        self.tilt_angle = self.tilt_angle
-        # print("Calculated tilt angle (rad): {0}".format(self.tilt_angle))
 
-    ## Camera data should be converted to cartesian coordinates (x, y, z).
+        self.tilt_angle = self.tilt_angle
+
     ## Based on the limitations of the arm movements, set a limited domain and set
     ## coordinates outside of this domain to the nearest possible point.
     def adjust_coordinates(self, x, y, z):
@@ -227,20 +201,8 @@ class ActionHandler:
         dist = math.sqrt(y**2 + z**2)
 
         point = [y, z]
-        # z_or = z
-        ## Quantize z to the proper interval. The camera has ranges 32-86
-        # z = self.quantize([32, 80], self.z_range, z)
-        # print("initial z:{0}, quantized z:{1}".format(z_or, z))
 
-        # if dist <= self.min_dist:
-        #     dist = self.min_dist
-        #     z = self.min_dist
-        #     ## Convert the point into a unit vector
-        #     point_vec = [y / dist, z / dist]
-        #     ## Get the point max_dist away from the center in the direction of the vector
-        #     point = list(map(lambda p: p * self.min_dist,point_vec))
-        # elif dist > self.max_dist:
-        #     ## Convert the point into a unit vector
+        ## Convert the point into a unit vector
         if dist > self.max_dist:
             point_vec = [y / dist, z / dist]
             ## Get the point max_dist away from the center in the direction of the vector
@@ -248,6 +210,7 @@ class ActionHandler:
         
         return point
 
+    ## Converts a list of 3 angles in degrees to radians
     def rads3(self, angles):
         deg1 = angles[0] * (180 / math.pi)
         deg2 = angles[1] * (180 / math.pi)
@@ -258,9 +221,10 @@ class ActionHandler:
     def run(self):
         rate = rospy.Rate(10)
 
+        #### CODE FOR REAL ROBOT
         if not self.simulation:
             while not rospy.is_shutdown():
-
+                ## Only publish commands if state calls for it
                 if self.arm_mode == True:
                     print("{0} -> {1}".format(self.true_z, self.target_z))
                     self.two_RIK(self.target_x, self.target_y, self.target_z)
@@ -270,17 +234,16 @@ class ActionHandler:
                     self.q1 = self.clamp(self.q1_range, self.q1)
                     self.q2 = self.clamp(self.q2_range, self.q2)
                     self.q3 = self.clamp(self.q3_range, self.tilt_angle)
-                    ## Raise the arm
-                    
+                    ## Move the arm
                     try:
                         self.move_group_arm.go((self.q0, self.q1, self.q2, self.q3), wait=False)#self.q1, self.q2, self.tilt_angle), wait=False)
                     except:
                         pass
                     rate.sleep()
+                    ## Move the gripper
                     self.move_group_gripper.go((self.gripper_target, self.gripper_target), wait=False)
                 rate.sleep()
-                
-        # print("Current joint angles: {0}".format(self.rads3([self.q1_current, self.q2_current, self.q3_current])))
+        #### CODE FOR GAZEBO                
         else:
             print(self.max_dist)
 
