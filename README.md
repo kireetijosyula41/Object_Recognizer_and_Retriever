@@ -7,7 +7,7 @@ In daily life, there are daily tasks and applications that can be achieved by a 
 
 As shown in the two images below, our team has managed to implement a object detection algorithm that is able to recognize some of our preselected items (preselected items = ball, bottle, pen, cube), as shown in the screenshot of the turtlebot camera below. The second image shows the results of training our object detection algorithm on a subset of synthetic image data containing images of our four objects when placed against a background. The performance was high for the bottle and the ball and was moderate for the pen and the cube, as shown in the imges below: 
 ![](https://github.com/kireetijosyula41/Object_Recognizer_and_Retriever/blob/main/val_batch0_labels.jpg)
-![](https://github.com/kireetijosyula41/Object_Recognizer_and_Retriever/blob/main/val_batch0_preds.jpg)
+![](https://github.com/kireetijosyula41/Object_Recognizer_and_Retriever/blob/main/val_batch0_pred.jpg)
 
 Additionally, we managed to fine tune a custom inverse kinematics solver in order to get the robot arm to move to the motions of the hand through use of a depth camera. This functionality of this is displayed in the first GIF below:
 
