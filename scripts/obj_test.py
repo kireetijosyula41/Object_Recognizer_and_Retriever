@@ -13,18 +13,21 @@ def image_callback(msg):
     try:
         # Convert ROS Image message to OpenCV image
         bridge = CvBridge()
-        frame = bridge.imgmsg_to_cv2(msg, "bgr8")
+        frame = bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
 
         # Perform inference
         results = model(frame)
 
         # Extract bounding boxes
-        boxes = results.xyxy[0].numpy()  # xyxy format: x1, y1, x2, y2, confidence, class
+        boxes = results.xyxy[0].cpu().numpy()  # xyxy format: x1, y1, x2, y2, confidence, class
+        names = results.names
 
         # Process detections (e.g., draw bounding boxes, publish results)
         for box in boxes:
-            x1, y1, x2, y2, conf, cls = map(int, box)
+            x1, y1, x2, y2, conf, cls_id = map(int, box)
+            class_name = names[cls_id]
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.putText(frame, class_name, (x1, y1 -10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
         # Display the frame with bounding boxes
         cv2.imshow("YOLOv5 Object Detection", frame)

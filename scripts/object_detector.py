@@ -83,8 +83,9 @@ class Detecter:
         xx = torch.FloatTensor(x[None,])
         # prediction
         out_class, out_bb = self.model(xx)
+        result = self.rev_class_dict[torch.argmax(out_class).item()]
         # print("out class", self.rev_class_dict[torch.argmax(out_class, 1).tolist()[0]], out_class)
         # print("bounding box", out_bb)
-        return out_bb, torch.argmax(out_class)
+        return out_bb, result
 
 
