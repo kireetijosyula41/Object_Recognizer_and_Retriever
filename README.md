@@ -14,6 +14,7 @@ Additionally, we managed to fine tune a custom inverse kinematics solver in orde
 ![](https://github.com/kireetijosyula41/Object_Recognizer_and_Retriever/blob/main/HandTracking.gif)
 
 Integrating all components was accomplished by the following procedure: First, the robot identifies the object specified by the user and moves to it. Then, the control of the arm is ceded to the user. Once the user has picked up the object (gripper closed for >10s) the robot returns to its original positions, finds the correct AR tag, and places the object in front of it. The entire process can be seen in the GIF below:
+
 ![](https://github.com/kireetijosyula41/Object_Recognizer_and_Retriever/blob/main/ORARMain.gif)
 
 # System Architecture
