@@ -16,7 +16,8 @@ from std_msgs.msg import String
 from enum import Enum, auto
 from collections import deque
 from itertools import *
-from object_detector import Detecter
+
+import torch
 
 import math
 import sys
@@ -61,8 +62,7 @@ class Actions(object):
         # for openCV
         self.image_sub = rospy.Subscriber('camera/rgb/image_raw', Image, self.image_callback)
         self.bridge = cv_bridge.CvBridge()
-        self.latest_image = None
-        self.new_image_flag = False
+        
         # QR-code
         self.aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 
@@ -96,20 +96,43 @@ class Actions(object):
 
     #set up image openCV
     def image_callback(self, data):
-        self.detecter = Detecter()
+        model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
         ####################################################
         # here goes the object-recognition
-        self.img = self.bridge.imgmsg_to_cv2(data, desired_encoding='bgr8')
-        self.img = cv2.resize(self.img, (638, 480))
-        ####################################################
-        # here goes the object-recognition
-        out_boxes, out_class = self.detecter.detect_image(self.img)
-        # print("out class", out_class)
+        try:
+            # Convert ROS Image message to OpenCV image
+           
+            self.frame = self.bridge.imgmsg_to_cv2(data, desired_encoding="bgr8")
 
-        self.frame_with_boxes = self.draw_boxes(self.img, out_boxes)
-        self.latest_image = self.frame_with_boxes
-        self.new_image_flag = True
+            # Perform inference
+            results = model(self.frame)
 
+            # Extract bounding boxes
+            boxes = results.xyxy[0].cpu().numpy()  # xyxy format: x1, y1, x2, y2, confidence, class
+            names = results.names
+
+            # Process detections (e.g., draw bounding boxes, publish results)
+            for box in boxes:
+                x1, y1, x2, y2, conf, cls_id = map(int, box)
+                class_name = names[cls_id]
+
+                if(self.target_obj in  class_name):
+
+                    cv2.rectangle(self.frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    self.target_center_x = (x1+x2)/2
+                    self.target_center_y = (y1+y2)/2
+                    cv2.putText(self.frame, class_name, (x1, y1 -10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+
+                else: 
+                    self.target_center_x, self.target_center_y = None
+
+            # Display the frame with bounding boxes
+            cv2.imshow("YOLOv5 Object Detection", self.frame)
+            cv2.waitKey(1)
+
+        except Exception as e:
+            rospy.logerr("Error processing image: %s", e)
+    
     def main_drive(self):
         self.listenCommands()
         #using the code from line follower for to_object
@@ -156,37 +179,29 @@ class Actions(object):
     # contains find object and move to object
     def to_object(self):
         print("start moving")
-        # mask = self.get_color_mask(self.object, hsv)
-        # h,w,d = self.img.shape
-        # M = cv2.moments(mask)
-
-        # # if the target object is in the view, go
-        # if M['m00'] > 0:
-        #     cx = int(M['m10']/M['m00'])
-        #     cy = int(M['m01']/M['m00'])
-        
-        #     min_dist = self.min_dist if self.min_dist is not None else 0.3
-
-        #     self.cmd.linear.x = self.k_linear * min_dist
-        #     error = cx - w//2
-        #     self.cmd.angular.z = -self.k_angular * error
-        #     self.cmd_pub.publish(self.cmd)
-
+        h,w,d = self.frame.shape
+        min_dist = self.min_dist if self.min_dist is not None else 0.3
+        if self.target_center_x is not None:
+            self.cmd.linear.x = self.k_linear * min_dist
+            error = self.target_center_x - w//2
+            self.cmd.angular.z = -self.k_angular * error
+            self.cmd_pub.publish(self.cmd)
         # if the target object is out of the view, turn to find
-        # else: 
-        #     print("####  finding... ####")
-        #     self.trun_to_find()
+        else: 
+            self.turn_to_find()
 
     def pick_up(self):
         self.state_publisher.publish("Start")
         #TODO: arm_control subscribe this to allow the arm control to perform
+        if self.center_target_y is None:
+            self.state_publisher.publish("End") 
+            self.turn_around()
+            self.move = next_Move.move_to_tag
 
         #TODO: while hand performing, need to check the targte_obj's position
         # if in camera, target_obj is not in view:
         # self.turn_around()
         # self.move = next_Move.move_to_tag
-
-
 
     def drop_off(self):
         arm_joint_goal = [0, 0.65, -0.3, -0.6]
@@ -202,15 +217,12 @@ class Actions(object):
     def to_tag(self, gray_img):
         #process AR recognize
         (corners, ids, rejected_points) = cv2.aruco.detectMarkers(gray_img, self.aruco_dict)
-
         h,w = gray_img.shape[:2]
-       
         # we need to find this one and move to 
         target_idx = None
-
         #check if it find the right tag
         if ids is not None:
-            ids = np.ndarray.flatten(ids)
+            ids = np.ndarray.flatten(ids)       # FIX THIS FIX THIS
             
             for index, id in enumerate(ids):
                 if id == self.tag:
