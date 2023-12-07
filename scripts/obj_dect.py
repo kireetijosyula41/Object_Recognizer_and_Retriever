@@ -5,8 +5,8 @@ from cv_bridge import CvBridge
 class ObjectDetection:
     def __init__(self):
         # Load YOLOv5 model
-        model_path = "../models/yolo_custom27/weights/best.pt"
-        self.model = torch.hub.load('ultralytics/yolov5', 'custom', path=model_path, force_reload=True)
+        model_path = "./yolo_custom27/weights/best.pt"
+        self.model = torch.hub.load('../models/', 'custom', path=model_path, source='local')
         self.bridge = CvBridge()
 
 
