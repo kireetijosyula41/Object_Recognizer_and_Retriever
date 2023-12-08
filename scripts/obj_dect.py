@@ -3,12 +3,13 @@ import torch
 from cv_bridge import CvBridge
 
 class ObjectDetection:
-    def __init__(self):
+    def __init__(self, conf_thresh=0.25):
         self.custom = False
+        self.conf_thresh = conf_thresh
         # Load YOLOv5 model
         ### CUSTOM MODEL
         if self.custom:
-            model_path = "./yolo/runs/train/yolo_custom12/weights/best.pt"
+            model_path = "./yolo/runs/train/exp4/weights/best.pt"
             self.model = torch.hub.load('yolo/', 'custom', path=model_path, source='local')
             self.bridge = CvBridge()
         ### Pretrained model    
@@ -27,5 +28,10 @@ class ObjectDetection:
         names = results.names
         # Extract bounding boxes
         boxes = results.xyxy[0].cpu().numpy()  # xyxy format: x1, y1, x2, y2, confidence, class
+
+        filtered_boxes = []
+        for box in boxes:
+            if box[4] >= self.conf_thresh:
+                filtered_boxes.append(box)
        
-        return boxes, names, frame, w
+        return np.array(filtered_boxes), names, frame, w
