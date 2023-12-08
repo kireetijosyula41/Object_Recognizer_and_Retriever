@@ -65,6 +65,7 @@ class Actions(object):
         self.move_group_arm = moveit_commander.MoveGroupCommander("arm")
         self.move_group_gripper = moveit_commander.MoveGroupCommander("gripper")
         self.grip_range = [-0.010, 0.019]
+        self.gripper_value = 0
 
         # for openCV
         self.image_sub = rospy.Subscriber('camera/rgb/image_raw', Image, self.image_callback)
@@ -80,7 +81,7 @@ class Actions(object):
 
         #set up for lidar
         self.scan_sub = rospy.Subscriber('/scan', LaserScan, self.scan_callback)
-        self.min_dist = None
+        self.min_dist = 0.0
         
 
         #setup for state control

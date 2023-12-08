@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import torch
 from cv_bridge import CvBridge
+import numpy as np
 
 class ObjectDetection:
     def __init__(self, conf_thresh=0.25):
