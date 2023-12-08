@@ -4,11 +4,17 @@ from cv_bridge import CvBridge
 
 class ObjectDetection:
     def __init__(self):
+        self.custom = False
         # Load YOLOv5 model
-        model_path = "./runs/train/yolo_custom27/weights/best.pt"
-        self.model = torch.hub.load('/models/', 'custom', path=model_path, source='local')
-        self.bridge = CvBridge()
-
+        ### CUSTOM MODEL
+        if self.custom:
+            model_path = "./yolo/runs/train/yolo_custom12/weights/best.pt"
+            self.model = torch.hub.load('yolo/', 'custom', path=model_path, source='local')
+            self.bridge = CvBridge()
+        ### Pretrained model    
+        else:
+            self.model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+            self.bridge = CvBridge()
 
     def detect_objects(self, ros_image):
         # Convert ROS Image message to OpenCV image
